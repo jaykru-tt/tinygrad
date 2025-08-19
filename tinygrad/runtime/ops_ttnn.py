@@ -16,6 +16,7 @@ if TYPE_CHECKING:
   from tinygrad.device import Buffer
 
 try:
+  import os
   import ttnn
   import torch
 except ImportError as e:
@@ -229,8 +230,26 @@ class TTNNProgram:
             break
         if buf_idx is None or buf_idx >= len(bufs):
           raise RuntimeError("TTNN LOAD: unable to resolve source buffer")
-        # Fallback to flat shape if no shape hint
-        shape = tuple(shape_hint) if shape_hint is not None else (bufs[buf_idx].size // dtype.itemsize,)
+        # Choose shape hint only if it matches buffer size; else fallback to flat
+        buf_obj = bufs[buf_idx]
+        try:
+          byte_size = buf_obj["size"] if isinstance(buf_obj, dict) else buf_obj.size
+        except Exception:
+          # last resort: try to get underlying meta
+          meta = getattr(buf_obj, "_buf", None)
+          byte_size = meta.get("size", 0) if isinstance(meta, dict) else 0
+        numel = byte_size // dtype.itemsize
+        if shape_hint is not None:
+          try:
+            from math import prod as _prod
+            if _prod(shape_hint) == numel:
+              shape = tuple(shape_hint)
+            else:
+              shape = (numel,)
+          except Exception:
+            shape = (numel,)
+        else:
+          shape = (numel,)
         values[i] = self._ensure_ttnn_tensor(bufs[buf_idx], shape, dtype)
         continue
       
@@ -272,13 +291,15 @@ class TTNNProgram:
       
       # Reduction operations
       if op is Ops.REDUCE_AXIS:
-        axis = arg[0] if arg else -1
-        reduce_op = arg[1] if len(arg) > 1 else Ops.ADD
-        
+        # arg is (reduce_op, axis_tuple)
+        if not arg or len(arg) < 2:
+          reduce_op, axis = Ops.ADD, -1
+        else:
+          reduce_op, axis = arg[0], arg[1]
         if reduce_op is Ops.ADD and hasattr(ttnn, 'sum'):
           values[i] = ttnn.sum(src_values[0], dim=axis)
           continue
-        elif reduce_op is Ops.MAX and hasattr(ttnn, 'max'):
+        if reduce_op is Ops.MAX and hasattr(ttnn, 'max'):
           values[i] = ttnn.max(src_values[0], dim=axis)
           continue
         raise NotImplementedError(f"Reduction op {reduce_op} not implemented for TTNN")
@@ -343,6 +364,8 @@ class TTNNDevice(Compiled):
     device_id = int(device.split(":")[1]) if ":" in device else 0
 
     # Initialize TTNN device
+    # Disable block reordering to avoid sorting non-orderable args in TTNN pipeline
+    os.environ["BLOCK_REORDER"] = "0"
     self.ttnn_device = ttnn.open_device(device_id=device_id)
     print(f"TTNN device created: {self.ttnn_device}")
 
