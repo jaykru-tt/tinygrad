@@ -22,6 +22,8 @@ try:
 except ImportError as e:
   raise ImportError("TTNN backend requires ttnn and torch to be installed") from e
 
+CACHED_DEVICE = None
+
 # ---- TTNN Renderer that base64 decodes and interprets UOps ----------------
 class TTNNRenderer(Renderer):
   """Renderer that base64 decodes UOps for direct interpretation"""
@@ -489,14 +491,17 @@ class TTNNDevice(Compiled):
   """Tenstorrent TTNN device implementation"""
 
   def __init__(self, device: str = "TTNN:0"):
+    global CACHED_DEVICE
     # Extract device ID from device string
     device_id = int(device.split(":")[1]) if ":" in device else 0
 
     # Initialize TTNN device
     # Disable block reordering to avoid sorting non-orderable args in TTNN pipeline
     os.environ["BLOCK_REORDER"] = "0"
-    self.ttnn_device = ttnn.open_device(device_id=device_id)
-    print(f"TTNN device created: {self.ttnn_device}")
+    if not CACHED_DEVICE:
+      CACHED_DEVICE = ttnn.open_device(device_id=device_id)
+      print(f"TTNN device created: {CACHED_DEVICE}")
+    self.ttnn_device = CACHED_DEVICE
 
     # Initialize the compiled device with renderer, compiler, and program
     super().__init__(device, TTNNAllocator(self), TTNNRenderer(), TTNNCompiler(), TTNNProgram)
