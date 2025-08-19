@@ -128,6 +128,30 @@ class TTNNProgram:
     """Execute the UOps by interpreting them directly with TTNN operations"""
     values = {}  # Store intermediate results by UOp index
 
+    # Precompute supported op maps based on available ttnn symbols (lowercase)
+    def _mk_map(pairs):
+      out = {}
+      for op_const, ttnn_name in pairs:
+        if hasattr(ttnn, ttnn_name):
+          out[op_const] = getattr(ttnn, ttnn_name)
+      return out
+
+    unary_map = _mk_map([
+      (Ops.EXP2, 'exp2'),
+      (Ops.LOG2, 'log2'),
+      (Ops.SQRT, 'sqrt'),
+      (Ops.NEG, 'neg'),
+      (Ops.SIN, 'sin'),
+    ])
+    binary_map = _mk_map([
+      (Ops.ADD, 'add'),
+      (Ops.MUL, 'mul'),
+      (Ops.SUB, 'sub'),
+      (Ops.FDIV, 'divide'),
+      (Ops.MAX, 'max'),
+      (Ops.POW, 'pow'),
+    ])
+
     # Map DEFINE_GLOBAL uops to runtime buffer indices and base dtypes
     define_global_order: list[int] = [idx for idx,(oop,_,_,_) in enumerate(self.uops_data) if oop is Ops.DEFINE_GLOBAL]
     define_to_runtime_idx: dict[int,int] = {uop_idx: runtime_idx for runtime_idx, uop_idx in enumerate(define_global_order)}
@@ -178,18 +202,19 @@ class TTNNProgram:
       
       if op in {Ops.DEFINE_GLOBAL, Ops.DEFINE_LOCAL}:
         # These define buffer access - we'll handle them when loading
-        pass
+        continue
 
       if op is Ops.RANGE:
         # Single-worker: loop index is 0
         values[i] = 0
+        continue
       if op is Ops.ENDRANGE:
         # No value to produce
-        pass
+        continue
 
       if op is Ops.INDEX:
         # Not used in the simple eltwise-add test; implement later as needed
-        pass
+        continue
       
       if op is Ops.LOAD:
         # Resolve runtime buffer index even when wrapped in VIEWs
@@ -207,8 +232,9 @@ class TTNNProgram:
         # Fallback to flat shape if no shape hint
         shape = tuple(shape_hint) if shape_hint is not None else (bufs[buf_idx].size // dtype.itemsize,)
         values[i] = self._ensure_ttnn_tensor(bufs[buf_idx], shape, dtype)
+        continue
       
-      if op is Ops.CONST:
+      elif op is Ops.CONST:
         # Numeric scalar constants remain scalars for scheduler math; tensors go to TTNN
         const_val = arg
         if isinstance(const_val, (int, float, bool)):
@@ -221,14 +247,12 @@ class TTNNProgram:
             layout=ttnn.ROW_MAJOR_LAYOUT,
             device=self._get_ttnn_device()
           )
+        continue
       
-      unary_map = { getattr(Ops, op) : getattr(ttnn, op) for op in ["EXP2","LOG2","SQRT","RECIP","NEG","SIN","COS","TAN","ASIN","ACOS","ATAN","SINH","COSH","TANH","ASINH","ACOSH","ATANH"]}
       if op in unary_map:
         values[i] = unary_map[op](src_values[0])
-      else:
-        raise NotImplementedError(f"TTNN backend doesn't support operation: {op}")
+        continue
       
-      binary_map = { getattr(Ops, op) : getattr(ttnn, op) for op in ["ADD","MUL","SUB","FDIV","MAX","POW","AND","OR","XOR","SHL","SHR","MOD"]}
       if op in binary_map:
         a = src_values[0]
         b = src_values[1]
@@ -237,37 +261,27 @@ class TTNNProgram:
         if a is None or b is None:
           raise RuntimeError(f"TTNN binary op missing inputs at {i}: {self.uops_data[i]}")
         values[i] = binary_map[op](a, b)
-      else:
-        raise NotImplementedError(f"TTNN backend doesn't support tensor op: {op}")
+        continue
       
-      # Comparison operations  
-      comparison_map = { getattr(Ops, op) : getattr(ttnn, op) for op in ["LT","EQ","NE","GE","GT","LE"]}
-      if op in comparison_map:
-        a = src_values[0]
-        b = src_values[1]
-        if a is None and src_indices[0] in values: a = values[src_indices[0]]
-        if b is None and src_indices[1] in values: b = values[src_indices[1]]
-        if a is None or b is None:
-          raise RuntimeError(f"TTNN comparison op missing inputs at {i}: {self.uops_data[i]}")
-        values[i] = comparison_map[op](a, b)
-      else:
-        raise NotImplementedError(f"TTNN backend doesn't support tensor op: {op}")
+      # Comparison operations not supported by current ttnn python API
       
       # Ternary operations
       if op is Ops.WHERE:
         values[i] = ttnn.where(src_values[0], src_values[1], src_values[2])
+        continue
       
       # Reduction operations
       if op is Ops.REDUCE_AXIS:
         axis = arg[0] if arg else -1
         reduce_op = arg[1] if len(arg) > 1 else Ops.ADD
         
-        if reduce_op is Ops.ADD:
+        if reduce_op is Ops.ADD and hasattr(ttnn, 'sum'):
           values[i] = ttnn.sum(src_values[0], dim=axis)
-        elif reduce_op is Ops.MAX:
+          continue
+        elif reduce_op is Ops.MAX and hasattr(ttnn, 'max'):
           values[i] = ttnn.max(src_values[0], dim=axis)
-        else:
-          raise NotImplementedError(f"Reduction op {reduce_op} not implemented for TTNN")
+          continue
+        raise NotImplementedError(f"Reduction op {reduce_op} not implemented for TTNN")
 
       # Movement operations
       if op is Ops.VIEW:
@@ -279,15 +293,16 @@ class TTNNProgram:
           except Exception:
             new_shape = None
           values[i] = ttnn.reshape(base, new_shape) if new_shape is not None else base
-        else:
-          # Do not materialize pointers here
-          pass
+        # Do not materialize pointers here
+        continue
       if op is Ops.RESHAPE:
         new_shape = arg
         values[i] = ttnn.reshape(src_values[0], new_shape)
+        continue
       if op is Ops.PERMUTE:
         dims = arg
         values[i] = ttnn.permute(src_values[0], dims)
+        continue
       
       # Store operation
       if op is Ops.STORE:
@@ -304,14 +319,14 @@ class TTNNProgram:
         if out_buf_idx is None or out_buf_idx >= len(bufs):
           raise RuntimeError("TTNN STORE: unable to resolve destination buffer")
         bufs[out_buf_idx]["ttnn_tensor"] = result_tensor
+        continue
       
       # Skip operations that don't produce values
       if op in {Ops.BARRIER, Ops.SINK, Ops.NOOP, Ops.ENDIF, Ops.IF}:
-        pass
+        continue
       
-      else:
-        # For unimplemented operations, raise an error for now
-        raise NotImplementedError(f"TTNN backend doesn't support operation: {op}")
+      # For unimplemented operations, raise an error for now
+      raise NotImplementedError(f"TTNN backend doesn't support operation: {op}")
       
       # end per-uop
     
