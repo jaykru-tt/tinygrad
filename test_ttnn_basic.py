@@ -7,7 +7,7 @@ import os
 import sys
 
 # Add tinygrad to path
-sys.path.insert(0, '/home/j/projects/tinygrad')
+sys.path.insert(0, os.getenv("PWD"))
 
 try:
     # Test device discovery
