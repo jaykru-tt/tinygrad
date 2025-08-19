@@ -278,42 +278,53 @@ class TTNNProgram:
           meta = getattr(buf_obj, "_buf", None)
           byte_size = meta.get("size", 0) if isinstance(meta, dict) else 0
         numel = byte_size // dtype.itemsize
-        # Determine base shape. If we have strides, set 1 where stride==0 to enable broadcasting
-        base_shape = None
+        # Build TTNN tensor in two steps: load flat, then apply reshape/permute to realize VIEW
+        base_tensor = self._ensure_ttnn_tensor(bufs[buf_idx], (numel,), dtype)
+        final_tensor = base_tensor
         if shape_strides is not None:
           shp, std = shape_strides
-          try:
-            base_shape = tuple((1 if (s == 0) else int(d)) for d, s in zip(shp, std))
-          except Exception:
-            base_shape = None
-        if base_shape is None:
-          if shape_hint is not None:
-            try:
-              from math import prod as _prod
-              if _prod(shape_hint) == numel:
-                base_shape = tuple(shape_hint)
-              else:
-                # heuristic: assign dims from right to left to match numel
-                rem = numel
-                dims = list(shape_hint)
-                out = [1]*len(dims)
-                for i in range(len(dims)-1, -1, -1):
-                  d = int(dims[i])
-                  if d <= 0: d = 1
-                  if rem % d == 0 and rem // d >= 1:
-                    out[i] = d
-                    rem //= d
-                  else:
-                    out[i] = 1
-                if rem != 1:
-                  base_shape = (numel,)
-                else:
-                  base_shape = tuple(out)
-            except Exception:
-              base_shape = (numel,)
+          nz = [(d, s) for d, s in enumerate(std) if s != 0]
+          if len(nz) == 0:
+            # all broadcast, just make a scalar then expand (will broadcast later in ops)
+            final_tensor = ttnn.reshape(base_tensor, (1,)*len(shp))
+          elif len(nz) == len(shp):
+            # no broadcasting, reshape directly to hint if valid
+            if shape_hint is not None:
+              final_tensor = ttnn.reshape(base_tensor, tuple(shape_hint))
+            else:
+              final_tensor = base_tensor
+          elif len(nz) == 2:
+            # common matmul lowering pattern: two data dims and one broadcast dim
+            # order non-zero dims by stride (major -> minor)
+            nz_sorted = sorted(nz, key=lambda x: x[1], reverse=True)
+            base2d_shape = (int(shp[nz_sorted[0][0]]), int(shp[nz_sorted[1][0]]))
+            # reshape flat to base2d
+            tmp = ttnn.reshape(base_tensor, base2d_shape)
+            # extend to N dims by appending ones
+            tmp = ttnn.reshape(tmp, base2d_shape + (1,)*(len(shp)-2))
+            # build perm to place axes at correct dims
+            # mapping from view dim -> axis index in base2d
+            axis_map = {nz_sorted[0][0]: 0, nz_sorted[1][0]: 1}
+            # target positions for axis 0 and 1
+            pos0 = next(idx for idx, d in enumerate(range(len(shp))) if axis_map.get(d, -1) == 0)
+            pos1 = next(idx for idx, d in enumerate(range(len(shp))) if axis_map.get(d, -1) == 1)
+            # current axes are [0,1,2,3,...] where 2.. are singleton dims
+            perm = [None]*len(shp)
+            perm[pos0] = 0
+            perm[pos1] = 1
+            # fill remaining with the singleton axes in order
+            single_axes = [ax for ax in range(2, len(shp))]
+            for idx in range(len(shp)):
+              if perm[idx] is None:
+                perm[idx] = single_axes.pop(0)
+            final_tensor = ttnn.permute(tmp, tuple(perm))
           else:
-            base_shape = (numel,)
-        values[i] = self._ensure_ttnn_tensor(bufs[buf_idx], base_shape, dtype)
+            # fallback: try to reshape to shape hint
+            final_tensor = ttnn.reshape(base_tensor, tuple(shape_hint) if shape_hint is not None else (numel,))
+        else:
+          # no view info, reshape to hint if valid
+          final_tensor = ttnn.reshape(base_tensor, tuple(shape_hint)) if shape_hint is not None else base_tensor
+        values[i] = final_tensor
         continue
       
       elif op is Ops.CONST:
