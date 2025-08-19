@@ -161,7 +161,6 @@ class TTNNProgram:
       rm = ttnn.to_layout(t, ttnn.ROW_MAJOR_LAYOUT)
       return ttnn.to_torch(rm)
 
-    import ipdb; ipdb.set_trace()
     for i, (op, dtype, src_indices, arg) in enumerate(self.uops_data):
       # Helper to lazily materialize trivial sources (SPECIAL/CONST scalars)
       def _maybe_materialize_src(idx: int):
@@ -263,7 +262,12 @@ class TTNNProgram:
           t = self._ensure_ttnn_tensor(bufs[buf_idx], (base_len,), dtype)
           if start != 0 or end != base_len:
             torch_view = ttnn_to_torch_row_major(t).reshape(base_len)[start:end]
-            values[i] = ttnn.from_torch(torch_view)
+            values[i] = ttnn.from_torch(
+              torch_view,
+              dtype=ttnn.float32,
+              layout=ttnn.ROW_MAJOR_LAYOUT,
+              device=self._get_ttnn_device()
+            )
           else:
             values[i] = t
         else:
@@ -407,7 +411,12 @@ class TTNNProgram:
           base_len = bufs[out_buf_idx]["size"] // out_dtype.itemsize
           # materialize output current tensor and payload to torch
           if bufs[out_buf_idx].get("ttnn_tensor") is None:
-            bufs[out_buf_idx]["ttnn_tensor"] = ttnn.from_torch(torch.zeros((base_len,), dtype=torch.float32), layout=ttnn.ROW_MAJOR_LAYOUT)
+            bufs[out_buf_idx]["ttnn_tensor"] = ttnn.from_torch(
+              torch.zeros((base_len,), dtype=torch.float32),
+              dtype=ttnn.float32,
+              layout=ttnn.ROW_MAJOR_LAYOUT,
+              device=self._get_ttnn_device()
+            )
           out_t = ttnn_to_torch_row_major(bufs[out_buf_idx]["ttnn_tensor"]).reshape(-1)
           pay_t = result_tensor if isinstance(result_tensor, torch.Tensor) else ttnn_to_torch_row_major(result_tensor).reshape(-1)
           # determine slice and mask
@@ -423,7 +432,12 @@ class TTNNProgram:
           pay_slice = pay_t.reshape(-1)[: (end - start)]
           out_slice[mask] = pay_slice[mask]
           out_t[start:end] = out_slice
-          bufs[out_buf_idx]["ttnn_tensor"] = ttnn.from_torch(out_t, layout=ttnn.ROW_MAJOR_LAYOUT)
+          bufs[out_buf_idx]["ttnn_tensor"] = ttnn.from_torch(
+            out_t,
+            dtype=ttnn.float32,
+            layout=ttnn.ROW_MAJOR_LAYOUT,
+            device=self._get_ttnn_device()
+          )
         else:
           # Fallback: original simple whole-buffer assignment
           if result_tensor is not None:
