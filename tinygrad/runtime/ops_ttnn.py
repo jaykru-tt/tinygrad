@@ -138,7 +138,7 @@ class TTNNProgram:
       meta["ttnn_tensor"] = ttnn.from_torch(
         torch_tensor,
         dtype=ttnn_dt,
-        layout=ttnn.ROW_MAJOR_LAYOUT,
+        layout=ttnn.TILE_LAYOUT,
         device=self._get_ttnn_device()
       )
 
@@ -335,7 +335,7 @@ class TTNNProgram:
           values[i] = ttnn.from_torch(
             torch_tensor,
             dtype=ttnn_dt,
-            layout=ttnn.ROW_MAJOR_LAYOUT,
+            layout=ttnn.TILE_LAYOUT,
             device=self._get_ttnn_device()
           )
         continue
@@ -380,22 +380,23 @@ class TTNNProgram:
         else:
           reduce_op, axis = arg[0], arg[1]
         in_tensor = src_values[0] if src_values and src_values[0] is not None else values[src_indices[0]]
-        # normalize dims for ttnn (use torch only to get rank, not for compute)
-        dims = axis if isinstance(axis, (list, tuple)) else (axis,)
+        # compute dims natively for ttnn tensor in_tensor
         try:
-          rm = ttnn.to_layout(in_tensor, ttnn.ROW_MAJOR_LAYOUT)
-          rank = ttnn.to_torch(rm).ndim
+          shape = tuple(in_tensor.shape)
+          rank = len(shape)
         except Exception:
+          # fallback: assume last dim
           rank = None
+        dims = axis if isinstance(axis, (list, tuple)) else (axis,)
         if rank is not None:
           ndims = []
           for a in dims:
             a = int(a)
             if a < 0: a += rank
-            ndims.append(a)
-          dims = tuple(sorted(set([x for x in ndims if 0 <= x < rank])))
-          if not dims:
-            dims = (rank-1,)
+            if 0 <= a < rank: ndims.append(a)
+          if not ndims:
+            ndims = [rank-1]
+          dims = tuple(sorted(set(ndims)))
         dim_arg = (dims[0] if len(dims) == 1 else list(dims))
         if reduce_op is Ops.ADD and hasattr(ttnn, 'sum'):
           values[i] = ttnn.sum(in_tensor, dim=dim_arg)
