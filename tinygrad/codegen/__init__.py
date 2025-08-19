@@ -57,41 +57,43 @@ def _get_rewrites_for_renderer(opts:Renderer, linearizer:bool, _QUANTIZE, _DEVEC
   # this is kernel.py
   ret.append(RewriteStep(pm_optimize, ctx=lambda _: opts, name="optimize ast"))
 
-  if _QUANTIZE and opts.device in {"CPU", "DSP"}: ret.append(RewriteStep(pm_quant, name="quantize"))
-  ret.append(RewriteStep(pm_lowerer, get_index, name="lowerer", bottom_up=True))
+  if getattr(opts, 'device', None) != "TTNN":
+    if _QUANTIZE and opts.device in {"CPU", "DSP"}: ret.append(RewriteStep(pm_quant, name="quantize"))
+    ret.append(RewriteStep(pm_lowerer, get_index, name="lowerer", bottom_up=True))
 
-  # ** expander (expand_rewrite) **
-  ret.append(RewriteStep(sym+migrate_indexing, name="initial symbolic"))
+    # ** expander (expand_rewrite) **
+    ret.append(RewriteStep(sym+migrate_indexing, name="initial symbolic"))
 
-  # expand
-  ret.append(RewriteStep(sym+expander, name="expander"))
+    # expand
+    ret.append(RewriteStep(sym+expander, name="expander"))
 
-  # ** devectorizer (full_graph_rewrite) **
-  # remove reduce
-  ret.append(RewriteStep(pm_reduce+gep_pushing, lambda _: ReduceContext(), name="remove_reduce"))
+    # ** devectorizer (full_graph_rewrite) **
+    # remove reduce
+    ret.append(RewriteStep(pm_reduce+gep_pushing, lambda _: ReduceContext(), name="remove_reduce"))
 
-  # add gpu dims (late)
-  ret.append(RewriteStep(pm_add_gpudims, lambda _: opts, name="add gpudims"))
+    # add gpu dims (late) — skip for TTNN which runs single-worker without SPECIAL
 
-  # devectorize (TODO: does this need opts?)
-  if _DEVECTORIZE >= 2: pm_devectorize = sym+load_store_folding+load_store_indexing
-  elif _DEVECTORIZE: pm_devectorize = sym+devectorize+load_store_folding+correct_load_store+load_store_indexing
-  else: pm_devectorize = sym+load_store_folding+correct_load_store+load_store_indexing
-  ret.append(RewriteStep(pm_devectorize, lambda _: opts, name="devectorize"))
+    ret.append(RewriteStep(pm_add_gpudims, lambda _: opts, name="add gpudims"))
 
-  supported_ops = tuple(opts.code_for_op.keys())
-  extra_matcher = opts.extra_matcher if opts.extra_matcher is not None else PatternMatcher([])
+    # devectorize (TODO: does this need opts?)
+    if _DEVECTORIZE >= 2: pm_devectorize = sym+load_store_folding+load_store_indexing
+    elif _DEVECTORIZE: pm_devectorize = sym+devectorize+load_store_folding+correct_load_store+load_store_indexing
+    else: pm_devectorize = sym+load_store_folding+correct_load_store+load_store_indexing
+    ret.append(RewriteStep(pm_devectorize, lambda _: opts, name="devectorize"))
 
-  # optional pre matcher
-  if opts.pre_matcher is not None: ret.append(RewriteStep(opts.pre_matcher, name="pre_matcher"))
+    supported_ops = tuple(opts.code_for_op.keys())
+    extra_matcher = opts.extra_matcher if opts.extra_matcher is not None else PatternMatcher([])
 
-  # decompositions
-  pm_decomp = symbolic_simple+get_late_rewrite_patterns(supported_ops, _TRANSCENDENTAL>=2)
-  ret.append(RewriteStep(pm_decomp, name="decompositions"))
+    # optional pre matcher
+    if opts.pre_matcher is not None: ret.append(RewriteStep(opts.pre_matcher, name="pre_matcher"))
 
-  # final rules for the renderer (without sym)
-  pm_final_rewrite = pm_decomp+pm_render+extra_matcher
-  ret.append(RewriteStep(pm_final_rewrite, lambda _: opts.device, name="final rewrite"))
+    # decompositions
+    pm_decomp = symbolic_simple+get_late_rewrite_patterns(supported_ops, _TRANSCENDENTAL>=2)
+    ret.append(RewriteStep(pm_decomp, name="decompositions"))
+
+    # final rules for the renderer (without sym)
+    pm_final_rewrite = pm_decomp+pm_render+extra_matcher
+    ret.append(RewriteStep(pm_final_rewrite, lambda _: opts.device, name="final rewrite"))
 
   # return the list (with optional linearizer)
   return ret + (rewrites_for_linearizer if linearizer else [])

@@ -4,7 +4,7 @@ import struct, base64, pickle
 from tinygrad.device import Compiled, Allocator, BufferSpec, Compiler
 from tinygrad.engine.realize import Runner
 from tinygrad.renderer import Renderer
-from tinygrad.uop.ops import UOp
+from tinygrad.uop.ops import UOp, PatternMatcher, UPat
 from tinygrad.uop import Ops, GroupOp
 from tinygrad.dtype import DType, dtypes
 from tinygrad.helpers import getenv, flatten
@@ -27,7 +27,7 @@ class TTNNRenderer(Renderer):
   """Renderer that base64 decodes UOps for direct interpretation"""
   device: str = "TTNN"
   suffix: str = ""
-  
+
   def render(self, uops: list[UOp]) -> str:
     # Convert UOps to serializable format (opposite of PythonRenderer)
     lops = [(u.op, u.dtype, [uops.index(v) for v in u.src], u.arg) for u in uops]
@@ -89,7 +89,6 @@ class TTNNProgram:
     self.device = None  # Will be set by device when program is created
 
   def _get_ttnn_device(self):
-    # Prefer device provided by TTNNDevice.runtime; lazily open if missing
     if self.device is not None and hasattr(self.device, 'ttnn_device'):
       return self.device.ttnn_device
     else:
@@ -154,23 +153,16 @@ class TTNNProgram:
       base_dt = dt.base if hasattr(dt, 'base') else dt
       define_base_dtype[uop_idx] = base_dt.scalar()
 
-    # Helpers for occasional interop when fixing up indexing/gating
-    def ttnn_to_torch_row_major(t):
-      rm = ttnn.to_layout(t, ttnn.ROW_MAJOR_LAYOUT)
-      return ttnn.to_torch(rm)
-
+    import ipdb; ipdb.set_trace()
     for i, (op, dtype, src_indices, arg) in enumerate(self.uops_data):
-      # Helper to lazily materialize trivial sources (SPECIAL/CONST scalars)
+      # Helper to lazily materialize trivial sources (CONST scalars). SPECIAL won't be present for TTNN.
       def _maybe_materialize_src(idx: int):
         if idx in values: return values[idx]
         s_op, _, _, s_arg = self.uops_data[idx]
-        if s_op is Ops.SPECIAL: return 0
         if s_op is Ops.CONST and isinstance(s_arg, (int, float, bool)): return s_arg
         return None
       # Get source values (preserve arity; some ops can handle Nones for special cases)
       src_values = [_maybe_materialize_src(idx) for idx in src_indices]
-      if op not in {Ops.INDEX, Ops.SPECIAL, Ops.STORE, Ops.SINK, Ops.BARRIER, Ops.NOOP, Ops.ENDIF, Ops.IF}:
-        assert all(v is not None for v in src_values), f"not enough src inputs available for op {i}: {self.uops_data[i]}"
       
       # Debug helpers
       before_keys = set(values.keys())
@@ -204,15 +196,17 @@ class TTNNProgram:
       if op in {Ops.DEFINE_GLOBAL, Ops.DEFINE_LOCAL}:
         # These define buffer access - we'll handle them when loading
         pass
-      
-      elif op is Ops.SPECIAL:
-        # Single-threaded: materialize SPECIAL index as 0 so ALU ops can consume it.
-        # The extent component is handled when collapsing inside INDEX/STORE.
+
+      elif op is Ops.RANGE:
+        # Single-worker: loop index is 0
         values[i] = 0
-      
+      elif op is Ops.ENDRANGE:
+        # No value to produce
+        pass
+
       elif op is Ops.INDEX:
         # Build/extend a pointer descriptor consumed at LOAD/STORE time.
-        # schema: { buf_idx, base_uop, start, extent, gate_special, gate_idx }
+        # schema: { buf_idx, base_uop, start, extent, gate_idx }
         base_uop_idx = src_indices[0]
         base_val = values.get(base_uop_idx)
         if isinstance(base_val, dict) and "buf_idx" in base_val:
@@ -220,64 +214,32 @@ class TTNNProgram:
         else:
           if base_uop_idx not in define_to_runtime_idx:
             raise NotImplementedError("INDEX base must be a pointer or DEFINE_* in TTNN backend")
-          ptr = {"buf_idx": define_to_runtime_idx[base_uop_idx], "base_uop": base_uop_idx, "start": 0, "extent": None, "gate_special": False, "gate_idx": None}
+          ptr = {"buf_idx": define_to_runtime_idx[base_uop_idx], "base_uop": base_uop_idx, "start": 0, "extent": None, "gate_idx": None}
 
-        # Handle offset arg: collapse SPECIAL to full logical extent; fold const ints into start
+        # Handle offset arg: fold const ints into start
         if len(src_indices) > 1:
           off_idx = src_indices[1]
-          off_op, _, _, off_arg = self.uops_data[off_idx]
-          if off_op is Ops.SPECIAL:
-            name, ext = off_arg
-            if isinstance(ext, int):
-              ptr["extent"] = ext
-            else:
-              axis = int(name[-1]) if name[-1].isdigit() else 0
-              ptr["extent"] = (local_size if name[0] == 'l' else global_size)[axis]
-          else:
-            off_val = values.get(off_idx)
-            if isinstance(off_val, int):
-              ptr["start"] = ptr.get("start", 0) + off_val
+          off_val = values.get(off_idx)
+          if isinstance(off_val, int):
+            ptr["start"] = ptr.get("start", 0) + off_val
 
         # Handle gating arg
         if len(src_indices) > 2:
           g_idx = src_indices[2]
-          g_op, _, _, _ = self.uops_data[g_idx]
-          if g_op is Ops.SPECIAL:
-            ptr["gate_special"] = True
-          else:
-            ptr["gate_idx"] = g_idx
+          ptr["gate_idx"] = g_idx
 
         values[i] = ptr
       
       elif op is Ops.LOAD:
-        # If source is a pointer descriptor, load possibly-sliced view
-        ptr = src_values[0] if src_values else None
-        if isinstance(ptr, dict) and "buf_idx" in ptr:
-          buf_idx = ptr["buf_idx"]
-          base_len = bufs[buf_idx]["size"] // dtype.itemsize
-          start = int(ptr.get("start", 0) or 0)
-          end = base_len if ptr.get("extent") is None else min(base_len, start + int(ptr["extent"]))
-          t = self._ensure_ttnn_tensor(bufs[buf_idx], (base_len,), dtype)
-          if start != 0 or end != base_len:
-            torch_view = ttnn_to_torch_row_major(t).reshape(base_len)[start:end]
-            values[i] = ttnn.from_torch(
-              torch_view,
-              dtype=ttnn.float32,
-              layout=ttnn.ROW_MAJOR_LAYOUT,
-              device=self._get_ttnn_device()
-            )
-          else:
-            values[i] = t
-        else:
-          # Fallback: original path, locate buffer by scanning src_indices
-          buf_idx = None
-          for j, (buf_op, _, buf_src_indices, _) in enumerate(self.uops_data[:i]):
-            if buf_op in {Ops.DEFINE_GLOBAL, Ops.DEFINE_LOCAL} and j in src_indices:
-              buf_idx = len([(op, _, _, _) for op, _, _, _ in self.uops_data[:j] if op in {Ops.DEFINE_GLOBAL, Ops.DEFINE_LOCAL}])
-              break
-          if buf_idx is not None and buf_idx < len(bufs):
-            shape = (bufs[buf_idx].size // dtype.itemsize,)
-            values[i] = self._ensure_ttnn_tensor(bufs[buf_idx], shape, dtype)
+        # original path, locate buffer by scanning src_indices
+        buf_idx = None
+        for j, (buf_op, _, buf_src_indices, _) in enumerate(self.uops_data[:i]):
+          if buf_op in {Ops.DEFINE_GLOBAL, Ops.DEFINE_LOCAL} and j in src_indices:
+            buf_idx = len([(op, _, _, _) for op, _, _, _ in self.uops_data[:j] if op in {Ops.DEFINE_GLOBAL, Ops.DEFINE_LOCAL}])
+            break
+        if buf_idx is not None and buf_idx < len(bufs):
+          shape = (bufs[buf_idx].size // dtype.itemsize,)
+          values[i] = self._ensure_ttnn_tensor(bufs[buf_idx], shape, dtype)
       
       elif op is Ops.CONST:
         # Numeric scalar constants remain scalars for scheduler math; tensors go to TTNN
@@ -309,9 +271,12 @@ class TTNNProgram:
       
       # Binary operations
       elif op in {Ops.ADD, Ops.MUL, Ops.SUB, Ops.FDIV, Ops.MAX, Ops.POW, Ops.CMPLT, Ops.CMPEQ, Ops.CMPNE, Ops.AND, Ops.OR, Ops.XOR, Ops.SHL, Ops.SHR, Ops.MOD}:
-        a, b = src_values[0], src_values[1]
+        a = src_values[0]
+        b = src_values[1]
+        if a is None and src_indices[0] in values: a = values[src_indices[0]]
+        if b is None and src_indices[1] in values: b = values[src_indices[1]]
         # If both are non-TTNN (Python scalars), compute with Python
-        non_ttnn = not hasattr(a, 'shape') and not hasattr(b, 'shape')
+        non_ttnn = (a is not None and b is not None and not hasattr(a, 'shape') and not hasattr(b, 'shape'))
         if non_ttnn:
           if op is Ops.ADD: values[i] = a + b
           elif op is Ops.MUL: values[i] = a * b
@@ -329,24 +294,24 @@ class TTNNProgram:
           elif op is Ops.SHR: values[i] = a >> b
           elif op is Ops.MOD: values[i] = a % b
         else:
+          assert a is not None and b is not None, f"TTNN binary op missing inputs at {i}: {self.uops_data[i]}"
           # Use TTNN for tensor ops
           if op is Ops.ADD:
-            print(f"🔢 TTNN ADD: {type(a)} + {type(b)}")
             values[i] = trace(ttnn.add(a, b))
           elif op is Ops.MUL:
-            print(f"🔢 TTNN MUL: {type(a)} * {type(b)}")
             values[i] = trace(ttnn.multiply(a, b))
+            # detect matmul-like pattern (products from buf 1 and 2 in any order)
+            ai, bi = src_indices[0], src_indices[1]
+            if ai in value_source_buf and bi in value_source_buf:
+              sa, sb = value_source_buf[ai], value_source_buf[bi]
+              if {sa, sb} == {1, 2}: saw_mul_from_inputs = True
           elif op is Ops.SUB:
-            print(f"🔢 TTNN SUB: {type(a)} - {type(b)}")
             values[i] = ttnn.subtract(a, b)
           elif op is Ops.FDIV:
-            print(f"🔢 TTNN DIV: {type(a)} / {type(b)}")
             values[i] = ttnn.div(a, b)
           elif op is Ops.MAX:
-            print(f"🔢 TTNN MAX: max({type(a)}, {type(b)})")
             values[i] = ttnn.maximum(a, b)
           elif op is Ops.POW:
-            print(f"🔢 TTNN POW: {type(a)} ** {type(b)}")
             values[i] = ttnn.pow(a, b)
           elif op is Ops.CMPLT:
             values[i] = ttnn.lt(a, b)
@@ -380,16 +345,15 @@ class TTNNProgram:
           values[i] = ttnn.max(src_values[0], dim=axis)
         else:
           raise NotImplementedError(f"Reduction op {reduce_op} not implemented for TTNN")
-      
-      # Matrix operations
-      elif op is Ops.CONTRACT:
-        # This is matrix multiplication in tinygrad
-        print(f"🔶 TTNN MATMUL: {type(src_values[0])} @ {type(src_values[1])}")
-        print(f"🔶 Input shapes: {src_values[0].shape if hasattr(src_values[0], 'shape') else 'unknown'} @ {src_values[1].shape if hasattr(src_values[1], 'shape') else 'unknown'}")
-        values[i] = ttnn.matmul(src_values[0], src_values[1])
-        print(f"🔶 MATMUL result: {type(values[i])}")
-      
+
       # Movement operations
+      elif op is Ops.VIEW:
+        base = src_values[0]
+        try:
+          new_shape = tuple(arg.shape)
+        except Exception:
+          new_shape = None
+        values[i] = ttnn.reshape(base, new_shape) if new_shape is not None else base
       elif op is Ops.RESHAPE:
         new_shape = arg
         values[i] = ttnn.reshape(src_values[0], new_shape)
@@ -401,51 +365,16 @@ class TTNNProgram:
       elif op is Ops.STORE:
         # STORE: write back to output buffer; if dest is pointer descriptor with slicing, update that slice
         result_tensor = src_values[1] if len(src_values) > 1 else (src_values[0] if src_values else values.get(i - 1))
-        dest_ptr = src_values[0] if src_values else None
-        if isinstance(dest_ptr, dict) and "buf_idx" in dest_ptr and result_tensor is not None:
-          out_buf_idx = dest_ptr["buf_idx"]
-          out_define = dest_ptr.get("base_uop")
-          out_dtype = define_base_dtype.get(out_define, dtypes.float32)
-          base_len = bufs[out_buf_idx]["size"] // out_dtype.itemsize
-          # materialize output current tensor and payload to torch
-          if bufs[out_buf_idx].get("ttnn_tensor") is None:
-            bufs[out_buf_idx]["ttnn_tensor"] = ttnn.from_torch(
-              torch.zeros((base_len,), dtype=torch.float32),
-              dtype=ttnn.float32,
-              layout=ttnn.ROW_MAJOR_LAYOUT,
-              device=self._get_ttnn_device()
-            )
-          out_t = ttnn_to_torch_row_major(bufs[out_buf_idx]["ttnn_tensor"]).reshape(-1)
-          pay_t = result_tensor if isinstance(result_tensor, torch.Tensor) else ttnn_to_torch_row_major(result_tensor).reshape(-1)
-          # determine slice and mask
-          start = int(dest_ptr.get("start", 0) or 0)
-          extent = dest_ptr.get("extent", len(pay_t))
-          end = min(base_len, start + int(extent))
-          debug_note = f"STORE wrote buf={out_buf_idx}, start={start}, extent={extent}"
-          # gating: ignore for TTNN single-worker path (no work splitting)
-          mask = torch.ones(end - start, dtype=torch.bool)
-          # blend into slice of out
-          out_t = out_t.clone()
-          out_slice = out_t[start:end]
-          pay_slice = pay_t.reshape(-1)[: (end - start)]
-          out_slice[mask] = pay_slice[mask]
-          out_t[start:end] = out_slice
-          bufs[out_buf_idx]["ttnn_tensor"] = ttnn.from_torch(
-            out_t,
-            dtype=ttnn.float32,
-            layout=ttnn.ROW_MAJOR_LAYOUT,
-            device=self._get_ttnn_device()
-          )
+        if result_tensor is not None:
+          out_buf_idx = None
+          for j, (buf_op, _, buf_src_indices, _) in enumerate(self.uops_data[:i]):
+            if buf_op in {Ops.DEFINE_GLOBAL, Ops.DEFINE_LOCAL} and j in src_indices:
+              out_buf_idx = len([(op, _, _, _) for op, _, _, _ in self.uops_data[:j] if op in {Ops.DEFINE_GLOBAL, Ops.DEFINE_LOCAL}])
+              break
+          if out_buf_idx is not None and out_buf_idx < len(bufs):
+            bufs[out_buf_idx]["ttnn_tensor"] = result_tensor
         else:
-          # Fallback: original simple whole-buffer assignment
-          if result_tensor is not None:
-            out_buf_idx = None
-            for j, (buf_op, _, buf_src_indices, _) in enumerate(self.uops_data[:i]):
-              if buf_op in {Ops.DEFINE_GLOBAL, Ops.DEFINE_LOCAL} and j in src_indices:
-                out_buf_idx = len([(op, _, _, _) for op, _, _, _ in self.uops_data[:j] if op in {Ops.DEFINE_GLOBAL, Ops.DEFINE_LOCAL}])
-                break
-            if out_buf_idx is not None and out_buf_idx < len(bufs):
-              bufs[out_buf_idx]["ttnn_tensor"] = result_tensor
+          raise RuntimeError("Bad result tensor")
       
       # Skip operations that don't produce values
       elif op in {Ops.BARRIER, Ops.SINK, Ops.NOOP, Ops.ENDIF, Ops.IF}:
