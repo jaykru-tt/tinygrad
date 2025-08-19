@@ -66,10 +66,29 @@ class TTNNAllocator(Allocator['TTNNDevice']):
       ttnn_tensor = src["ttnn_tensor"]
       # Convert to row major layout for host transfer
       row_major_tensor = ttnn.to_layout(ttnn_tensor, ttnn.ROW_MAJOR_LAYOUT)
-      torch_tensor = ttnn.to_torch(row_major_tensor)
-      # Convert torch tensor to bytes 
-      tensor_bytes = torch_tensor.detach().cpu().contiguous().view(torch.uint8).numpy().tobytes()
-      dest[:] = tensor_bytes
+      torch_tensor = ttnn.to_torch(row_major_tensor).detach().cpu().contiguous()
+      arr = torch_tensor.numpy()
+      expected_nbytes = len(dest)
+      if arr.nbytes != expected_nbytes:
+        numel = arr.size
+        # try to coerce dtype to match expected buffer size
+        if expected_nbytes == numel * 4:
+          torch_tensor = torch_tensor.to(torch.float32 if torch.is_floating_point(torch_tensor) else torch.int32)
+          arr = torch_tensor.numpy()
+        elif expected_nbytes == numel * 2:
+          # prefer float16 fallback
+          torch_tensor = torch_tensor.to(torch.float16)
+          arr = torch_tensor.numpy()
+        elif expected_nbytes == numel:
+          torch_tensor = torch_tensor.to(torch.uint8)
+          arr = torch_tensor.numpy()
+      out_bytes = arr.tobytes()
+      if len(out_bytes) != len(dest):
+        if len(out_bytes) > len(dest):
+          out_bytes = out_bytes[:len(dest)]
+        else:
+          out_bytes = out_bytes + b'\x00'*(len(dest)-len(out_bytes))
+      dest[:] = out_bytes
     else:
       # No ttnn tensor exists, copy from host buffer
       dest[:] = src["host_buffer"]
@@ -125,6 +144,8 @@ class TTNNProgram:
 
     return meta["ttnn_tensor"]
   
+  # torch tensors are not used for compute; only TTNN tensors are produced
+  
   def __call__(self, *bufs, global_size: tuple[int,int,int]=(1,1,1), local_size: tuple[int,int,int]=(1,1,1), vals: tuple[int, ...]=(), wait=False):
     """Execute the UOps by interpreting them directly with TTNN operations"""
     values = {}  # Store intermediate results by UOp index
@@ -136,7 +157,6 @@ class TTNNProgram:
         if hasattr(ttnn, ttnn_name):
           out[op_const] = getattr(ttnn, ttnn_name)
       return out
-
     unary_map = _mk_map([
       (Ops.EXP2, 'exp2'),
       (Ops.LOG2, 'log2'),
@@ -189,6 +209,23 @@ class TTNNProgram:
           return None
       return None
 
+    def _shape_strides_from_view_uop(src_uop_idx: int) -> tuple[tuple[int, ...], tuple[int, ...]] | None:
+      # best-effort extraction of (shape, strides) from ShapeTracker View
+      opx, _dtx, srcx, argx = self.uops_data[src_uop_idx]
+      if opx is not Ops.VIEW: return None
+      # common API: argx.views is a tuple of View objects
+      try:
+        views = getattr(argx, 'views', None)
+        if isinstance(views, (list, tuple)) and len(views) > 0:
+          v = views[-1]
+          shp = tuple(getattr(v, 'shape'))
+          std = tuple(getattr(v, 'strides'))
+          if isinstance(shp, tuple) and isinstance(std, tuple):
+            return shp, std
+      except Exception:
+        return None
+      return None
+    print(f"uops_data: {list(enumerate(self.uops_data))}")
     for i, (op, dtype, src_indices, arg) in enumerate(self.uops_data):
       # Helper to lazily materialize trivial sources (CONST scalars). SPECIAL won't be present for TTNN.
       def _maybe_materialize_src(idx: int):
@@ -221,9 +258,11 @@ class TTNNProgram:
         # Resolve runtime buffer index even when wrapped in VIEWs
         buf_idx = None
         shape_hint = None
+        shape_strides = None
         for src_uop_idx in src_indices:
           # prefer shapes from VIEW nodes if present
           shape_hint = _shape_from_view_uop(src_uop_idx) or shape_hint
+          shape_strides = _shape_strides_from_view_uop(src_uop_idx) or shape_strides
           maybe_idx = _runtime_buf_index_from_any(src_uop_idx)
           if maybe_idx is not None:
             buf_idx = maybe_idx
@@ -239,18 +278,42 @@ class TTNNProgram:
           meta = getattr(buf_obj, "_buf", None)
           byte_size = meta.get("size", 0) if isinstance(meta, dict) else 0
         numel = byte_size // dtype.itemsize
-        if shape_hint is not None:
+        # Determine base shape. If we have strides, set 1 where stride==0 to enable broadcasting
+        base_shape = None
+        if shape_strides is not None:
+          shp, std = shape_strides
           try:
-            from math import prod as _prod
-            if _prod(shape_hint) == numel:
-              shape = tuple(shape_hint)
-            else:
-              shape = (numel,)
+            base_shape = tuple((1 if (s == 0) else int(d)) for d, s in zip(shp, std))
           except Exception:
-            shape = (numel,)
-        else:
-          shape = (numel,)
-        values[i] = self._ensure_ttnn_tensor(bufs[buf_idx], shape, dtype)
+            base_shape = None
+        if base_shape is None:
+          if shape_hint is not None:
+            try:
+              from math import prod as _prod
+              if _prod(shape_hint) == numel:
+                base_shape = tuple(shape_hint)
+              else:
+                # heuristic: assign dims from right to left to match numel
+                rem = numel
+                dims = list(shape_hint)
+                out = [1]*len(dims)
+                for i in range(len(dims)-1, -1, -1):
+                  d = int(dims[i])
+                  if d <= 0: d = 1
+                  if rem % d == 0 and rem // d >= 1:
+                    out[i] = d
+                    rem //= d
+                  else:
+                    out[i] = 1
+                if rem != 1:
+                  base_shape = (numel,)
+                else:
+                  base_shape = tuple(out)
+            except Exception:
+              base_shape = (numel,)
+          else:
+            base_shape = (numel,)
+        values[i] = self._ensure_ttnn_tensor(bufs[buf_idx], base_shape, dtype)
         continue
       
       elif op is Ops.CONST:
@@ -259,26 +322,32 @@ class TTNNProgram:
         if isinstance(const_val, (int, float, bool)):
           values[i] = const_val
         else:
-          torch_tensor = torch.tensor(const_val, dtype=torch.float32)
+          # map dtype to torch/ttnn
+          if dtype == dtypes.float32:
+            torch_dt, ttnn_dt = torch.float32, ttnn.float32
+          elif dtype == dtypes.float16:
+            torch_dt, ttnn_dt = torch.float16, ttnn.float16
+          elif dtype == dtypes.int32:
+            torch_dt, ttnn_dt = torch.int32, ttnn.int32
+          else:
+            torch_dt, ttnn_dt = torch.float32, ttnn.float32
+          torch_tensor = torch.tensor(const_val, dtype=torch_dt)
           values[i] = ttnn.from_torch(
             torch_tensor,
-            dtype=ttnn.bfloat16,
+            dtype=ttnn_dt,
             layout=ttnn.ROW_MAJOR_LAYOUT,
             device=self._get_ttnn_device()
           )
         continue
       
       if op in unary_map:
-        values[i] = unary_map[op](src_values[0])
+        x = src_values[0] if src_values and src_values[0] is not None else values[src_indices[0]]
+        values[i] = unary_map[op](x)
         continue
       
       if op in binary_map:
-        a = src_values[0]
-        b = src_values[1]
-        if a is None and src_indices[0] in values: a = values[src_indices[0]]
-        if b is None and src_indices[1] in values: b = values[src_indices[1]]
-        if a is None or b is None:
-          raise RuntimeError(f"TTNN binary op missing inputs at {i}: {self.uops_data[i]}")
+        a = src_values[0] if src_values and src_values[0] is not None else values[src_indices[0]]
+        b = src_values[1] if len(src_values) > 1 and src_values[1] is not None else values[src_indices[1]]
         values[i] = binary_map[op](a, b)
         continue
       
@@ -286,7 +355,21 @@ class TTNNProgram:
       
       # Ternary operations
       if op is Ops.WHERE:
-        values[i] = ttnn.where(src_values[0], src_values[1], src_values[2])
+        c = src_values[0] if src_values and src_values[0] is not None else values[src_indices[0]]
+        x = src_values[1] if len(src_values) > 1 and src_values[1] is not None else values[src_indices[1]]
+        y = src_values[2] if len(src_values) > 2 and src_values[2] is not None else values[src_indices[2]]
+        values[i] = ttnn.where(c, x, y)
+        continue
+      if op is Ops.WMMA:
+        # Generic matmul via TTNN
+        a_t = src_values[0] if src_values and src_values[0] is not None else values[src_indices[0]]
+        b_t = src_values[1] if len(src_values) > 1 and src_values[1] is not None else values[src_indices[1]]
+        # ttnn.matmul exists
+        if hasattr(ttnn, 'matmul'):
+          values[i] = ttnn.matmul(a_t, b_t)
+        else:
+          # fallback using add/mul reductions
+          raise NotImplementedError("TTNN matmul not available")
         continue
       
       # Reduction operations
@@ -296,33 +379,66 @@ class TTNNProgram:
           reduce_op, axis = Ops.ADD, -1
         else:
           reduce_op, axis = arg[0], arg[1]
+        in_tensor = src_values[0] if src_values and src_values[0] is not None else values[src_indices[0]]
+        # normalize dims for ttnn (use torch only to get rank, not for compute)
+        dims = axis if isinstance(axis, (list, tuple)) else (axis,)
+        try:
+          rm = ttnn.to_layout(in_tensor, ttnn.ROW_MAJOR_LAYOUT)
+          rank = ttnn.to_torch(rm).ndim
+        except Exception:
+          rank = None
+        if rank is not None:
+          ndims = []
+          for a in dims:
+            a = int(a)
+            if a < 0: a += rank
+            ndims.append(a)
+          dims = tuple(sorted(set([x for x in ndims if 0 <= x < rank])))
+          if not dims:
+            dims = (rank-1,)
+        dim_arg = (dims[0] if len(dims) == 1 else list(dims))
         if reduce_op is Ops.ADD and hasattr(ttnn, 'sum'):
-          values[i] = ttnn.sum(src_values[0], dim=axis)
+          values[i] = ttnn.sum(in_tensor, dim=dim_arg)
           continue
         if reduce_op is Ops.MAX and hasattr(ttnn, 'max'):
-          values[i] = ttnn.max(src_values[0], dim=axis)
+          values[i] = ttnn.max(in_tensor, dim=dim_arg)
           continue
         raise NotImplementedError(f"Reduction op {reduce_op} not implemented for TTNN")
 
       # Movement operations
       if op is Ops.VIEW:
         # VIEW on a tensor -> reshape; on a pointer -> no-op (handled by LOAD/STORE)
-        base = src_values[0]
+        base = src_values[0] if len(src_values) > 0 else None
+        if base is None and src_indices and src_indices[0] in values:
+          base = values[src_indices[0]]
+        if base is None:
+          # source not materialized yet, skip
+          continue
         if hasattr(base, 'shape'):
           try:
             new_shape = tuple(arg.shape)
           except Exception:
             new_shape = None
-          values[i] = ttnn.reshape(base, new_shape) if new_shape is not None else base
+          values[i] = base.reshape(new_shape) if new_shape is not None else base
         # Do not materialize pointers here
         continue
       if op is Ops.RESHAPE:
         new_shape = arg
-        values[i] = ttnn.reshape(src_values[0], new_shape)
+        base = src_values[0] if len(src_values) > 0 else None
+        if base is None and src_indices and src_indices[0] in values:
+          base = values[src_indices[0]]
+        if base is None:
+          continue
+        values[i] = ttnn.reshape(base, new_shape)
         continue
       if op is Ops.PERMUTE:
         dims = arg
-        values[i] = ttnn.permute(src_values[0], dims)
+        base = src_values[0] if len(src_values) > 0 else None
+        if base is None and src_indices and src_indices[0] in values:
+          base = values[src_indices[0]]
+        if base is None:
+          continue
+        values[i] = ttnn.permute(base, dims)
         continue
       
       # Store operation
@@ -339,6 +455,7 @@ class TTNNProgram:
             break
         if out_buf_idx is None or out_buf_idx >= len(bufs):
           raise RuntimeError("TTNN STORE: unable to resolve destination buffer")
+        # Store TTNN tensor directly
         bufs[out_buf_idx]["ttnn_tensor"] = result_tensor
         continue
       

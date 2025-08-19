@@ -69,5 +69,8 @@ C = A @ B
 print(f"A @ B = {C}")
 C.realize()
 
+print("Comparing matmul results...")
+print(f"C.numpy() = {C.numpy()}")
+print(f"A.numpy() @ B.numpy() = {A.numpy() @ B.numpy()}")
 assert (C.numpy() == (A.numpy() @ B.numpy())).all()
 print("✓ All tests passed!")      
