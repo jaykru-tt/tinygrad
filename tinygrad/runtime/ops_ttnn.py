@@ -82,16 +82,11 @@ class TTNNProgram:
     self.name = name
     # Decode the base64 encoded UOps (reverse of compiler encoding)
     self.uops_data = pickle.loads(lib)  # List of (op, dtype, src_indices, arg) tuples
-    self.device = None  # Will be set by device when program is created
+    self.device = TTNNDevice()  # Will be set by device when program is created
     self._ttnn_device_handle = None  # lazy fallback if device is not set
 
   def _get_ttnn_device(self):
-    if self.device is not None and hasattr(self.device, 'ttnn_device'):
-      return self.device.ttnn_device
-    if self._ttnn_device_handle is None:
-      # open default device id 0 as a fallback
-      self._ttnn_device_handle = ttnn.open_device(device_id=0)
-    return self._ttnn_device_handle
+    return self.device.ttnn_device
   
   def _ensure_ttnn_tensor(self, buffer, shape: tuple[int, ...], dtype: DType) -> Any:
     """Convert buffer (allocator meta dict or Buffer) to ttnn.Tensor if needed"""
@@ -227,7 +222,7 @@ class TTNNProgram:
           torch_tensor,
           dtype=ttnn.bfloat16,
           layout=ttnn.TILE_LAYOUT,
-          device=self.device.ttnn_device
+          device=self._get_ttnn_device()
         )
       
       # Unary operations
@@ -372,7 +367,7 @@ class TTNNDevice(Compiled):
 
     # Initialize TTNN device
     self.ttnn_device = ttnn.open_device(device_id=device_id)
-    print(f"TTNN device created: {device}")
+    print(f"TTNN device created: {self.ttnn_device}")
 
     # Initialize the compiled device with renderer, compiler, and program
     super().__init__(device, TTNNAllocator(self), TTNNRenderer(), TTNNCompiler(), TTNNProgram)

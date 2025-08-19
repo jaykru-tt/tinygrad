@@ -53,4 +53,21 @@ print("✓ Tensor realized successfully!")
 print(f"Result: {c.numpy()}")
 assert (c.numpy() == np.array([5.0, 7.0, 9.0])).all()
 
+# Test 3x3 matmul
+print("\nTesting 3x3 matmul...")
+a_data = [[1.0, 2.0, 3.0],
+          [4.0, 5.0, 6.0],
+          [7.0, 8.0, 9.0]]
+b_data = [[9.0, 8.0, 7.0],
+          [6.0, 5.0, 4.0],
+          [3.0, 2.0, 1.0]]
+
+A = Tensor(a_data, device="TTNN")
+B = Tensor(b_data, device="TTNN")
+
+C = A @ B
+print(f"A @ B = {C}")
+C.realize()
+
+assert (C.numpy() == (A.numpy() @ B.numpy())).all()
 print("✓ All tests passed!")      
