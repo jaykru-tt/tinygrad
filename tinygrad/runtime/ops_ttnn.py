@@ -83,10 +83,19 @@ class TTNNProgram:
     # Decode the base64 encoded UOps (reverse of compiler encoding)
     self.uops_data = pickle.loads(lib)  # List of (op, dtype, src_indices, arg) tuples
     self.device = None  # Will be set by device when program is created
+    self._ttnn_device_handle = None  # lazy fallback if device is not set
+
+  def _get_ttnn_device(self):
+    if self.device is not None and hasattr(self.device, 'ttnn_device'):
+      return self.device.ttnn_device
+    if self._ttnn_device_handle is None:
+      # open default device id 0 as a fallback
+      self._ttnn_device_handle = ttnn.open_device(device_id=0)
+    return self._ttnn_device_handle
   
   def _ensure_ttnn_tensor(self, buffer, shape: tuple[int, ...], dtype: DType) -> Any:
-    """Convert buffer to ttnn.Tensor if needed"""
-    meta = buffer._buf  # Get allocator metadata
+    """Convert buffer (allocator meta dict or Buffer) to ttnn.Tensor if needed"""
+    meta = buffer if isinstance(buffer, dict) else buffer._buf
 
     if meta["ttnn_tensor"] is None:
       print(f"🔧 Creating TTNN tensor: shape={shape}, dtype={dtype}")
@@ -112,15 +121,15 @@ class TTNNProgram:
 
       print(f"🔧 Torch tensor shape: {torch_tensor.shape}, dtype: {torch_tensor.dtype}")
       
-      # Convert to ttnn tensor with TILE layout and bfloat16 dtype for best performance
-      ttnn_dtype = ttnn.bfloat16 if dtype in [dtypes.float32, dtypes.float16, dtypes.bfloat16] else ttnn.float32
-      print(f"🔧 Converting to TTNN tensor with dtype: {ttnn_dtype}, layout: TILE_LAYOUT")
+      # Convert to ttnn tensor; prefer float32 ROW_MAJOR for simplicity/alignment
+      ttnn_dtype = ttnn.float32
+      print(f"🔧 Converting to TTNN tensor with dtype: {ttnn_dtype}, layout: ROW_MAJOR_LAYOUT")
       
       meta["ttnn_tensor"] = ttnn.from_torch(
         torch_tensor,
         dtype=ttnn_dtype,
-        layout=ttnn.TILE_LAYOUT,
-        device=self.device.ttnn_device
+        layout=ttnn.ROW_MAJOR_LAYOUT,
+        device=self._get_ttnn_device()
       )
       
       print(f"✅ TTNN tensor created: {type(meta['ttnn_tensor'])}")
@@ -133,6 +142,23 @@ class TTNNProgram:
     """Execute the UOps by interpreting them directly with TTNN operations"""
     values = {}  # Store intermediate results by UOp index
 
+    # Map DEFINE_GLOBAL uops to runtime buffer indices and base dtypes
+    define_global_order: list[int] = [idx for idx,(oop,_,_,_) in enumerate(self.uops_data) if oop is Ops.DEFINE_GLOBAL]
+    define_to_runtime_idx: dict[int,int] = {uop_idx: runtime_idx for runtime_idx, uop_idx in enumerate(define_global_order)}
+    define_base_dtype: dict[int, DType] = {}
+    for uop_idx in define_global_order:
+      _, dt, _, _ = self.uops_data[uop_idx]
+      base_dt = dt.base if hasattr(dt, 'base') else dt
+      define_base_dtype[uop_idx] = base_dt.scalar()
+
+    # Helpers for occasional interop when fixing up indexing/gating
+    def ttnn_to_torch_row_major(t):
+      rm = ttnn.to_layout(t, ttnn.ROW_MAJOR_LAYOUT)
+      return ttnn.to_torch(rm)
+    def torch_to_ttnn_tile(t: torch.Tensor, force_float: bool=False):
+      ttnn_dtype = ttnn.float32
+      return ttnn.from_torch(t, dtype=ttnn_dtype, layout=ttnn.ROW_MAJOR_LAYOUT, device=self._get_ttnn_device())
+
     for i, (op, dtype, src_indices, arg) in enumerate(self.uops_data):
       # Get source values
       src_values = [values[idx] for idx in src_indices if idx in values]
@@ -141,18 +167,57 @@ class TTNNProgram:
         # These define buffer access - we'll handle them when loading
         continue
       
+      elif op is Ops.SPECIAL:
+        # NOOP: pretend we have one massive worker, interpret at INDEX/STORE time
+        continue
+      
+      elif op is Ops.INDEX:
+        # Pointer descriptor: { buf_idx, extent (if offset is SPECIAL), offsets (optional), base_uop, gate_special (bool) }
+        base_uop_idx = src_indices[0]
+        if base_uop_idx not in define_to_runtime_idx:
+          raise NotImplementedError("INDEX base must be DEFINE_GLOBAL in TTNN backend")
+        # derive extent if offset is SPECIAL
+        extent = None
+        if len(src_indices) > 1:
+          off_idx = src_indices[1]
+          off_op, _, _, off_arg = self.uops_data[off_idx]
+          if off_op is Ops.SPECIAL:
+            name, ext = off_arg
+            if isinstance(ext, int): extent = ext
+            else:
+              axis = int(name[-1]) if name[-1].isdigit() else 0
+              extent = (local_size if name[0] == 'l' else global_size)[axis]
+        gate_special = False
+        if len(src_indices) > 2:
+          g_idx = src_indices[2]
+          g_op, _, _, g_arg = self.uops_data[g_idx]
+          if g_op is Ops.SPECIAL: gate_special = True
+        values[i] = {"buf_idx": define_to_runtime_idx[base_uop_idx], "extent": extent, "base_uop": base_uop_idx, "gate_special": gate_special}
+      
       elif op is Ops.LOAD:
-        # Load from buffer - find the buffer this load refers to
-        buf_idx = None
-        for j, (buf_op, _, buf_src_indices, _) in enumerate(self.uops_data[:i]):
-          if buf_op in {Ops.DEFINE_GLOBAL, Ops.DEFINE_LOCAL} and j in src_indices:
-            buf_idx = len([(op, _, _, _) for op, _, _, _ in self.uops_data[:j] if op in {Ops.DEFINE_GLOBAL, Ops.DEFINE_LOCAL}])
-            break
-        
-        if buf_idx is not None and buf_idx < len(bufs):
-          # Get tensor shape from buffer size and dtype
-          shape = (bufs[buf_idx].size // dtype.itemsize,)
-          values[i] = self._ensure_ttnn_tensor(bufs[buf_idx], shape, dtype)
+        # If source is an INDEX pointer descriptor, return the whole buffer tensor (shaped by extent if provided)
+        ptr = src_values[0] if src_values else None
+        if isinstance(ptr, dict) and "buf_idx" in ptr:
+          buf_idx = ptr["buf_idx"]
+          base_len = bufs[buf_idx]["size"] // dtype.itemsize
+          shape = (ptr["extent"] if ptr.get("extent") is not None else base_len,)
+          t = self._ensure_ttnn_tensor(bufs[buf_idx], (base_len,), dtype)
+          # reshape if needed (pretend single massive worker over extent)
+          if shape != (base_len,):
+            torch_view = ttnn_to_torch_row_major(t).reshape(base_len)[:shape[0]]
+            values[i] = torch_to_ttnn_tile(torch_view)
+          else:
+            values[i] = t
+        else:
+          # Fallback: original path, locate buffer by scanning src_indices
+          buf_idx = None
+          for j, (buf_op, _, buf_src_indices, _) in enumerate(self.uops_data[:i]):
+            if buf_op in {Ops.DEFINE_GLOBAL, Ops.DEFINE_LOCAL} and j in src_indices:
+              buf_idx = len([(op, _, _, _) for op, _, _, _ in self.uops_data[:j] if op in {Ops.DEFINE_GLOBAL, Ops.DEFINE_LOCAL}])
+              break
+          if buf_idx is not None and buf_idx < len(bufs):
+            shape = (bufs[buf_idx].size // dtype.itemsize,)
+            values[i] = self._ensure_ttnn_tensor(bufs[buf_idx], shape, dtype)
       
       elif op is Ops.CONST:
         # Create constant tensor
@@ -241,19 +306,49 @@ class TTNNProgram:
       
       # Store operation
       elif op is Ops.STORE:
-        # Store result to output buffer
-        result_tensor = src_values[0] if src_values else values.get(i - 1)
-        if result_tensor is not None:
-          # Find the output buffer
-          out_buf_idx = None
-          for j, (buf_op, _, buf_src_indices, _) in enumerate(self.uops_data[:i]):
-            if buf_op in {Ops.DEFINE_GLOBAL, Ops.DEFINE_LOCAL} and j in src_indices:
-              out_buf_idx = len([(op, _, _, _) for op, _, _, _ in self.uops_data[:j] if op in {Ops.DEFINE_GLOBAL, Ops.DEFINE_LOCAL}])
-              break
-          
-          if out_buf_idx is not None and out_buf_idx < len(bufs):
-            # Store the ttnn tensor in the output buffer
-            bufs[out_buf_idx]._buf["ttnn_tensor"] = result_tensor
+        # STORE: write back to output buffer; if dest is pointer descriptor with extent, update that slice
+        result_tensor = src_values[1] if len(src_values) > 1 else (src_values[0] if src_values else values.get(i - 1))
+        dest_ptr = src_values[0] if src_values else None
+        if isinstance(dest_ptr, dict) and "buf_idx" in dest_ptr and result_tensor is not None:
+          out_buf_idx = dest_ptr["buf_idx"]
+          out_define = dest_ptr.get("base_uop")
+          out_dtype = define_base_dtype.get(out_define, dtypes.float32)
+          base_len = bufs[out_buf_idx]["size"] // out_dtype.itemsize
+          # materialize output current tensor and payload to torch
+          # NOTE: we intentionally use torch for the simple masked blend; compute remains on TTNN for math ops
+          # current out
+          # we don't know dtype here; load as float32 bytes and blend
+          if bufs[out_buf_idx].get("ttnn_tensor") is None:
+            # ensure one exists
+            bufs[out_buf_idx]["ttnn_tensor"] = torch_to_ttnn_tile(torch.zeros((base_len,), dtype=torch.float32), force_float=True)
+          out_t = ttnn_to_torch_row_major(bufs[out_buf_idx]["ttnn_tensor"]).reshape(-1)
+          pay_t = result_tensor if isinstance(result_tensor, torch.Tensor) else ttnn_to_torch_row_major(result_tensor).reshape(-1)
+          # determine extent and mask
+          extent = dest_ptr.get("extent", len(pay_t))
+          mask = None
+          # gate from SPECIAL means mask out index 0
+          if dest_ptr.get("gate_special", False):
+            mask = torch.ones(extent, dtype=torch.bool); mask[0] = False
+          elif len(src_indices) > 2 and src_indices[2] in values:
+            gval = values[src_indices[2]]
+            g_t = gval if isinstance(gval, torch.Tensor) else ttnn_to_torch_row_major(gval).reshape(-1)
+            mask = (g_t.to(torch.long) != 0)
+          if mask is None:
+            mask = torch.ones(extent, dtype=torch.bool)
+          # blend into beginning slice of out
+          out_t = out_t.clone()
+          out_t[:extent][mask] = pay_t.reshape(-1)[:extent][mask]
+          bufs[out_buf_idx]["ttnn_tensor"] = torch_to_ttnn_tile(out_t, force_float=True)
+        else:
+          # Fallback: original simple whole-buffer assignment
+          if result_tensor is not None:
+            out_buf_idx = None
+            for j, (buf_op, _, buf_src_indices, _) in enumerate(self.uops_data[:i]):
+              if buf_op in {Ops.DEFINE_GLOBAL, Ops.DEFINE_LOCAL} and j in src_indices:
+                out_buf_idx = len([(op, _, _, _) for op, _, _, _ in self.uops_data[:j] if op in {Ops.DEFINE_GLOBAL, Ops.DEFINE_LOCAL}])
+                break
+            if out_buf_idx is not None and out_buf_idx < len(bufs):
+              bufs[out_buf_idx]["ttnn_tensor"] = result_tensor
       
       # Skip operations that don't produce values
       elif op in {Ops.BARRIER, Ops.SINK, Ops.NOOP, Ops.ENDIF, Ops.IF}:
