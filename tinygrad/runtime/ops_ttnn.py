@@ -9,6 +9,10 @@ from tinygrad.uop import Ops, GroupOp
 from tinygrad.dtype import DType, dtypes
 from tinygrad.helpers import getenv, flatten
 
+def trace(s):
+  print(s)
+  return s
+
 if TYPE_CHECKING:
   from tinygrad.device import Buffer
 
@@ -156,10 +160,8 @@ class TTNNProgram:
     def ttnn_to_torch_row_major(t):
       rm = ttnn.to_layout(t, ttnn.ROW_MAJOR_LAYOUT)
       return ttnn.to_torch(rm)
-    def torch_to_ttnn_tile(t: torch.Tensor, force_float: bool=False):
-      ttnn_dtype = ttnn.float32
-      return ttnn.from_torch(t, dtype=ttnn_dtype, layout=ttnn.ROW_MAJOR_LAYOUT, device=self._get_ttnn_device())
 
+    import ipdb; ipdb.set_trace()
     for i, (op, dtype, src_indices, arg) in enumerate(self.uops_data):
       # Helper to lazily materialize trivial sources (SPECIAL/CONST scalars)
       def _maybe_materialize_src(idx: int):
@@ -261,7 +263,7 @@ class TTNNProgram:
           t = self._ensure_ttnn_tensor(bufs[buf_idx], (base_len,), dtype)
           if start != 0 or end != base_len:
             torch_view = ttnn_to_torch_row_major(t).reshape(base_len)[start:end]
-            values[i] = torch_to_ttnn_tile(torch_view)
+            values[i] = ttnn.from_torch(torch_view)
           else:
             values[i] = t
         else:
@@ -285,7 +287,7 @@ class TTNNProgram:
           values[i] = ttnn.from_torch(
             torch_tensor,
             dtype=ttnn.bfloat16,
-            layout=ttnn.TILE_LAYOUT,
+            layout=ttnn.ROW_MAJOR_LAYOUT,
             device=self._get_ttnn_device()
           )
       
@@ -328,10 +330,10 @@ class TTNNProgram:
           # Use TTNN for tensor ops
           if op is Ops.ADD:
             print(f"🔢 TTNN ADD: {type(a)} + {type(b)}")
-            values[i] = ttnn.add(a, b)
+            values[i] = trace(ttnn.add(a, b))
           elif op is Ops.MUL:
             print(f"🔢 TTNN MUL: {type(a)} * {type(b)}")
-            values[i] = ttnn.multiply(a, b)
+            values[i] = trace(ttnn.multiply(a, b))
           elif op is Ops.SUB:
             print(f"🔢 TTNN SUB: {type(a)} - {type(b)}")
             values[i] = ttnn.subtract(a, b)
@@ -405,7 +407,7 @@ class TTNNProgram:
           base_len = bufs[out_buf_idx]["size"] // out_dtype.itemsize
           # materialize output current tensor and payload to torch
           if bufs[out_buf_idx].get("ttnn_tensor") is None:
-            bufs[out_buf_idx]["ttnn_tensor"] = torch_to_ttnn_tile(torch.zeros((base_len,), dtype=torch.float32), force_float=True)
+            bufs[out_buf_idx]["ttnn_tensor"] = ttnn.from_torch(torch.zeros((base_len,), dtype=torch.float32), layout=ttnn.ROW_MAJOR_LAYOUT)
           out_t = ttnn_to_torch_row_major(bufs[out_buf_idx]["ttnn_tensor"]).reshape(-1)
           pay_t = result_tensor if isinstance(result_tensor, torch.Tensor) else ttnn_to_torch_row_major(result_tensor).reshape(-1)
           # determine slice and mask
@@ -421,7 +423,7 @@ class TTNNProgram:
           pay_slice = pay_t.reshape(-1)[: (end - start)]
           out_slice[mask] = pay_slice[mask]
           out_t[start:end] = out_slice
-          bufs[out_buf_idx]["ttnn_tensor"] = torch_to_ttnn_tile(out_t, force_float=True)
+          bufs[out_buf_idx]["ttnn_tensor"] = ttnn.from_torch(out_t, layout=ttnn.ROW_MAJOR_LAYOUT)
         else:
           # Fallback: original simple whole-buffer assignment
           if result_tensor is not None:
