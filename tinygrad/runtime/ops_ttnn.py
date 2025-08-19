@@ -82,11 +82,17 @@ class TTNNProgram:
     self.name = name
     # Decode the base64 encoded UOps (reverse of compiler encoding)
     self.uops_data = pickle.loads(lib)  # List of (op, dtype, src_indices, arg) tuples
-    self.device = TTNNDevice()  # Will be set by device when program is created
+    self.device = None  # Will be set by device when program is created
     self._ttnn_device_handle = None  # lazy fallback if device is not set
 
   def _get_ttnn_device(self):
-    return self.device.ttnn_device
+    # Prefer device provided by TTNNDevice.runtime; lazily open if missing
+    if self.device is not None and hasattr(self.device, 'ttnn_device'):
+      return self.device.ttnn_device
+    if self._ttnn_device_handle is None:
+      # Fallback to opening device 0 directly
+      self._ttnn_device_handle = ttnn.open_device(device_id=0)
+    return self._ttnn_device_handle
   
   def _ensure_ttnn_tensor(self, buffer, shape: tuple[int, ...], dtype: DType) -> Any:
     """Convert buffer (allocator meta dict or Buffer) to ttnn.Tensor if needed"""
@@ -155,51 +161,106 @@ class TTNNProgram:
       return ttnn.from_torch(t, dtype=ttnn_dtype, layout=ttnn.ROW_MAJOR_LAYOUT, device=self._get_ttnn_device())
 
     for i, (op, dtype, src_indices, arg) in enumerate(self.uops_data):
-      # Get source values
-      src_values = [values[idx] for idx in src_indices if idx in values]
+      # Helper to lazily materialize trivial sources (SPECIAL/CONST scalars)
+      def _maybe_materialize_src(idx: int):
+        if idx in values: return values[idx]
+        s_op, _, _, s_arg = self.uops_data[idx]
+        if s_op is Ops.SPECIAL: return 0
+        if s_op is Ops.CONST and isinstance(s_arg, (int, float, bool)): return s_arg
+        return None
+      # Get source values (preserve arity; some ops can handle Nones for special cases)
+      src_values = [_maybe_materialize_src(idx) for idx in src_indices]
+      if op not in {Ops.INDEX, Ops.SPECIAL, Ops.STORE, Ops.SINK, Ops.BARRIER, Ops.NOOP, Ops.ENDIF, Ops.IF}:
+        assert all(v is not None for v in src_values), f"not enough src inputs available for op {i}: {self.uops_data[i]}"
+      
+      # Debug helpers
+      before_keys = set(values.keys())
+      debug_note: str | None = None
+      def _fmt_val(v: Any) -> str:
+        if isinstance(v, dict) and "buf_idx" in v:
+          return f"Ptr(buf={v.get('buf_idx')}, extent={v.get('extent')}, gate={v.get('gate_special')})"
+        shape = getattr(v, 'shape', None)
+        dtype_str = getattr(v, 'dtype', None)
+        if shape is not None:
+          try:
+            shape_tuple = tuple(shape)
+          except Exception:
+            shape_tuple = shape
+          tn = type(v).__name__
+          return f"{tn}(shape={shape_tuple}, dtype={dtype_str})"
+        return repr(v)
+      def _emit_debug():
+        op_name = getattr(op, 'name', str(op))
+        inputs_str = ", ".join(_fmt_val(v) for v in src_values) if src_values else ""
+        added = set(values.keys()) - before_keys
+        if i in values:
+          print(f"🧩 UOp {i} {op_name}: inputs=[{inputs_str}] -> values[{i}]={_fmt_val(values[i])}")
+          other = [k for k in added if k != i]
+          if other:
+            print(f"   ↳ also updated keys={sorted(other)}")
+        else:
+          tail = f" ({debug_note})" if debug_note else ""
+          print(f"🧩 UOp {i} {op_name}: inputs=[{inputs_str}] -> no values write{tail}")
       
       if op in {Ops.DEFINE_GLOBAL, Ops.DEFINE_LOCAL}:
         # These define buffer access - we'll handle them when loading
-        continue
+        pass
       
       elif op is Ops.SPECIAL:
-        # NOOP: pretend we have one massive worker, interpret at INDEX/STORE time
-        continue
+        # Single-threaded: materialize SPECIAL index as 0 so ALU ops can consume it.
+        # The extent component is handled when collapsing inside INDEX/STORE.
+        values[i] = 0
       
       elif op is Ops.INDEX:
-        # Pointer descriptor: { buf_idx, extent (if offset is SPECIAL), offsets (optional), base_uop, gate_special (bool) }
+        # Build/extend a pointer descriptor consumed at LOAD/STORE time.
+        # schema: { buf_idx, base_uop, start, extent, gate_special, gate_idx }
         base_uop_idx = src_indices[0]
-        if base_uop_idx not in define_to_runtime_idx:
-          raise NotImplementedError("INDEX base must be DEFINE_GLOBAL in TTNN backend")
-        # derive extent if offset is SPECIAL
-        extent = None
+        base_val = values.get(base_uop_idx)
+        if isinstance(base_val, dict) and "buf_idx" in base_val:
+          ptr = dict(base_val)
+        else:
+          if base_uop_idx not in define_to_runtime_idx:
+            raise NotImplementedError("INDEX base must be a pointer or DEFINE_* in TTNN backend")
+          ptr = {"buf_idx": define_to_runtime_idx[base_uop_idx], "base_uop": base_uop_idx, "start": 0, "extent": None, "gate_special": False, "gate_idx": None}
+
+        # Handle offset arg: collapse SPECIAL to full logical extent; fold const ints into start
         if len(src_indices) > 1:
           off_idx = src_indices[1]
           off_op, _, _, off_arg = self.uops_data[off_idx]
           if off_op is Ops.SPECIAL:
             name, ext = off_arg
-            if isinstance(ext, int): extent = ext
+            if isinstance(ext, int):
+              ptr["extent"] = ext
             else:
               axis = int(name[-1]) if name[-1].isdigit() else 0
-              extent = (local_size if name[0] == 'l' else global_size)[axis]
-        gate_special = False
+              ptr["extent"] = (local_size if name[0] == 'l' else global_size)[axis]
+          else:
+            off_val = values.get(off_idx)
+            if isinstance(off_val, int):
+              ptr["start"] = ptr.get("start", 0) + off_val
+
+        # Handle gating arg
         if len(src_indices) > 2:
           g_idx = src_indices[2]
-          g_op, _, _, g_arg = self.uops_data[g_idx]
-          if g_op is Ops.SPECIAL: gate_special = True
-        values[i] = {"buf_idx": define_to_runtime_idx[base_uop_idx], "extent": extent, "base_uop": base_uop_idx, "gate_special": gate_special}
+          g_op, _, _, _ = self.uops_data[g_idx]
+          if g_op is Ops.SPECIAL:
+            ptr["gate_special"] = True
+          else:
+            ptr["gate_idx"] = g_idx
+
+        values[i] = ptr
       
       elif op is Ops.LOAD:
-        # If source is an INDEX pointer descriptor, return the whole buffer tensor (shaped by extent if provided)
+        # If source is a pointer descriptor, load possibly-sliced view
         ptr = src_values[0] if src_values else None
         if isinstance(ptr, dict) and "buf_idx" in ptr:
           buf_idx = ptr["buf_idx"]
           base_len = bufs[buf_idx]["size"] // dtype.itemsize
-          shape = (ptr["extent"] if ptr.get("extent") is not None else base_len,)
+          start = int(ptr.get("start", 0) or 0)
+          end = base_len if ptr.get("extent") is None else min(base_len, start + int(ptr["extent"]))
           t = self._ensure_ttnn_tensor(bufs[buf_idx], (base_len,), dtype)
-          # reshape if needed (pretend single massive worker over extent)
-          if shape != (base_len,):
-            torch_view = ttnn_to_torch_row_major(t).reshape(base_len)[:shape[0]]
+          if start != 0 or end != base_len:
+            torch_view = ttnn_to_torch_row_major(t).reshape(base_len)[start:end]
             values[i] = torch_to_ttnn_tile(torch_view)
           else:
             values[i] = t
@@ -215,15 +276,18 @@ class TTNNProgram:
             values[i] = self._ensure_ttnn_tensor(bufs[buf_idx], shape, dtype)
       
       elif op is Ops.CONST:
-        # Create constant tensor
+        # Numeric scalar constants remain scalars for scheduler math; tensors go to TTNN
         const_val = arg
-        torch_tensor = torch.tensor(const_val, dtype=torch.float32)
-        values[i] = ttnn.from_torch(
-          torch_tensor,
-          dtype=ttnn.bfloat16,
-          layout=ttnn.TILE_LAYOUT,
-          device=self._get_ttnn_device()
-        )
+        if isinstance(const_val, (int, float, bool)):
+          values[i] = const_val
+        else:
+          torch_tensor = torch.tensor(const_val, dtype=torch.float32)
+          values[i] = ttnn.from_torch(
+            torch_tensor,
+            dtype=ttnn.bfloat16,
+            layout=ttnn.TILE_LAYOUT,
+            device=self._get_ttnn_device()
+          )
       
       # Unary operations
       elif op is Ops.EXP2:
@@ -240,24 +304,54 @@ class TTNNProgram:
         values[i] = ttnn.sin(src_values[0])
       
       # Binary operations
-      elif op is Ops.ADD:
-        print(f"🔢 TTNN ADD: {type(src_values[0])} + {type(src_values[1])}")
-        values[i] = ttnn.add(src_values[0], src_values[1])
-      elif op is Ops.MUL:
-        print(f"🔢 TTNN MUL: {type(src_values[0])} * {type(src_values[1])}")
-        values[i] = ttnn.multiply(src_values[0], src_values[1])
-      elif op is Ops.SUB:
-        print(f"🔢 TTNN SUB: {type(src_values[0])} - {type(src_values[1])}")
-        values[i] = ttnn.subtract(src_values[0], src_values[1])
-      elif op is Ops.FDIV:
-        print(f"🔢 TTNN DIV: {type(src_values[0])} / {type(src_values[1])}")
-        values[i] = ttnn.div(src_values[0], src_values[1])
-      elif op is Ops.MAX:
-        print(f"🔢 TTNN MAX: max({type(src_values[0])}, {type(src_values[1])})")
-        values[i] = ttnn.maximum(src_values[0], src_values[1])
-      elif op is Ops.POW:
-        print(f"🔢 TTNN POW: {type(src_values[0])} ** {type(src_values[1])}")
-        values[i] = ttnn.pow(src_values[0], src_values[1])
+      elif op in {Ops.ADD, Ops.MUL, Ops.SUB, Ops.FDIV, Ops.MAX, Ops.POW, Ops.CMPLT, Ops.CMPEQ, Ops.CMPNE, Ops.AND, Ops.OR, Ops.XOR, Ops.SHL, Ops.SHR, Ops.MOD}:
+        a, b = src_values[0], src_values[1]
+        # If both are non-TTNN (Python scalars), compute with Python
+        non_ttnn = not hasattr(a, 'shape') and not hasattr(b, 'shape')
+        if non_ttnn:
+          if op is Ops.ADD: values[i] = a + b
+          elif op is Ops.MUL: values[i] = a * b
+          elif op is Ops.SUB: values[i] = a - b
+          elif op is Ops.FDIV: values[i] = a / b
+          elif op is Ops.MAX: values[i] = a if a >= b else b
+          elif op is Ops.POW: values[i] = a ** b
+          elif op is Ops.CMPLT: values[i] = int(a < b)
+          elif op is Ops.CMPEQ: values[i] = int(a == b)
+          elif op is Ops.CMPNE: values[i] = int(a != b)
+          elif op is Ops.AND: values[i] = a & b
+          elif op is Ops.OR: values[i] = a | b
+          elif op is Ops.XOR: values[i] = a ^ b
+          elif op is Ops.SHL: values[i] = a << b
+          elif op is Ops.SHR: values[i] = a >> b
+          elif op is Ops.MOD: values[i] = a % b
+        else:
+          # Use TTNN for tensor ops
+          if op is Ops.ADD:
+            print(f"🔢 TTNN ADD: {type(a)} + {type(b)}")
+            values[i] = ttnn.add(a, b)
+          elif op is Ops.MUL:
+            print(f"🔢 TTNN MUL: {type(a)} * {type(b)}")
+            values[i] = ttnn.multiply(a, b)
+          elif op is Ops.SUB:
+            print(f"🔢 TTNN SUB: {type(a)} - {type(b)}")
+            values[i] = ttnn.subtract(a, b)
+          elif op is Ops.FDIV:
+            print(f"🔢 TTNN DIV: {type(a)} / {type(b)}")
+            values[i] = ttnn.div(a, b)
+          elif op is Ops.MAX:
+            print(f"🔢 TTNN MAX: max({type(a)}, {type(b)})")
+            values[i] = ttnn.maximum(a, b)
+          elif op is Ops.POW:
+            print(f"🔢 TTNN POW: {type(a)} ** {type(b)}")
+            values[i] = ttnn.pow(a, b)
+          elif op is Ops.CMPLT:
+            values[i] = ttnn.lt(a, b)
+          elif op is Ops.CMPEQ:
+            values[i] = ttnn.eq(a, b)
+          elif op is Ops.CMPNE:
+            values[i] = ttnn.ne(a, b)
+          else:
+            raise NotImplementedError(f"TTNN backend doesn't support tensor op: {op}")
       
       # Comparison operations  
       elif op is Ops.CMPLT:
@@ -301,7 +395,7 @@ class TTNNProgram:
       
       # Store operation
       elif op is Ops.STORE:
-        # STORE: write back to output buffer; if dest is pointer descriptor with extent, update that slice
+        # STORE: write back to output buffer; if dest is pointer descriptor with slicing, update that slice
         result_tensor = src_values[1] if len(src_values) > 1 else (src_values[0] if src_values else values.get(i - 1))
         dest_ptr = src_values[0] if src_values else None
         if isinstance(dest_ptr, dict) and "buf_idx" in dest_ptr and result_tensor is not None:
@@ -310,29 +404,23 @@ class TTNNProgram:
           out_dtype = define_base_dtype.get(out_define, dtypes.float32)
           base_len = bufs[out_buf_idx]["size"] // out_dtype.itemsize
           # materialize output current tensor and payload to torch
-          # NOTE: we intentionally use torch for the simple masked blend; compute remains on TTNN for math ops
-          # current out
-          # we don't know dtype here; load as float32 bytes and blend
           if bufs[out_buf_idx].get("ttnn_tensor") is None:
-            # ensure one exists
             bufs[out_buf_idx]["ttnn_tensor"] = torch_to_ttnn_tile(torch.zeros((base_len,), dtype=torch.float32), force_float=True)
           out_t = ttnn_to_torch_row_major(bufs[out_buf_idx]["ttnn_tensor"]).reshape(-1)
           pay_t = result_tensor if isinstance(result_tensor, torch.Tensor) else ttnn_to_torch_row_major(result_tensor).reshape(-1)
-          # determine extent and mask
+          # determine slice and mask
+          start = int(dest_ptr.get("start", 0) or 0)
           extent = dest_ptr.get("extent", len(pay_t))
-          mask = None
-          # gate from SPECIAL means mask out index 0
-          if dest_ptr.get("gate_special", False):
-            mask = torch.ones(extent, dtype=torch.bool); mask[0] = False
-          elif len(src_indices) > 2 and src_indices[2] in values:
-            gval = values[src_indices[2]]
-            g_t = gval if isinstance(gval, torch.Tensor) else ttnn_to_torch_row_major(gval).reshape(-1)
-            mask = (g_t.to(torch.long) != 0)
-          if mask is None:
-            mask = torch.ones(extent, dtype=torch.bool)
-          # blend into beginning slice of out
+          end = min(base_len, start + int(extent))
+          debug_note = f"STORE wrote buf={out_buf_idx}, start={start}, extent={extent}"
+          # gating: ignore for TTNN single-worker path (no work splitting)
+          mask = torch.ones(end - start, dtype=torch.bool)
+          # blend into slice of out
           out_t = out_t.clone()
-          out_t[:extent][mask] = pay_t.reshape(-1)[:extent][mask]
+          out_slice = out_t[start:end]
+          pay_slice = pay_t.reshape(-1)[: (end - start)]
+          out_slice[mask] = pay_slice[mask]
+          out_t[start:end] = out_slice
           bufs[out_buf_idx]["ttnn_tensor"] = torch_to_ttnn_tile(out_t, force_float=True)
         else:
           # Fallback: original simple whole-buffer assignment
@@ -347,11 +435,13 @@ class TTNNProgram:
       
       # Skip operations that don't produce values
       elif op in {Ops.BARRIER, Ops.SINK, Ops.NOOP, Ops.ENDIF, Ops.IF}:
-        continue
+        pass
       
       else:
         # For unimplemented operations, raise an error for now
         raise NotImplementedError(f"TTNN backend doesn't support operation: {op}")
+      
+      _emit_debug()
     
     # Synchronize device to ensure all operations complete
     if self.device:
