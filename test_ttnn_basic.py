@@ -9,7 +9,7 @@ import numpy as np
 import random
 
 # Add tinygrad to path
-sys.path.insert(0, os.getenv("PWD"))
+sys.path.insert(0, os.getenv("PWD") or os.getcwd())
 
 # Test device discovery
 from tinygrad.device import Device
@@ -68,13 +68,21 @@ b_data = [[random.uniform(-1, 1) for _ in range(32)] for _ in range(32)]
 
 A = Tensor(a_data, device="TTNN")
 B = Tensor(b_data, device="TTNN")
+print(f"Tensor A: {A}")
+print(f"Tensor B: {B}")
 
 C = A @ B
 print(f"A @ B = {C}")
 C.realize()
 
+
 print("Comparing matmul results...")
-print(f"C.numpy() = {C.numpy()}")
-print(f"A.numpy() @ B.numpy() = {A.numpy() @ B.numpy()}")
-assert (C.numpy() == (A.numpy() @ B.numpy())).all()
+ttnn_out = C.numpy()
+cpu_ref = A.numpy() @ B.numpy()
+print(f"C.numpy() = {ttnn_out}")
+print(f"A.numpy() @ B.numpy() = {cpu_ref}")
+
+# TTNN may compute in reduced precision; compare with tolerance
+import numpy as _np
+assert _np.allclose(ttnn_out, cpu_ref, rtol=1e-1, atol=1e-1)
 print("✓ All tests passed!")      

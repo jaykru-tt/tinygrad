@@ -13,19 +13,25 @@ class Model:
 
   def to(self, device:str):
     self.l1.weight = self.l1.weight.to(device)
+    print("HET DEBUG l1.weight.shape: ", self.l1.weight.shape)
     if self.l1.bias is not None: self.l1.bias = self.l1.bias.to(device)
     self.l2.weight = self.l2.weight.to(device)
+    print("HET DEBUG l2.weight.shape: ", self.l2.weight.shape)
     if self.l2.bias is not None: self.l2.bias = self.l2.bias.to(device)
     self.l3.weight = self.l3.weight.to(device)
+    print("HET DEBUG l3.weight.shape: ", self.l3.weight.shape)
     if self.l3.bias is not None: self.l3.bias = self.l3.bias.to(device)
     return self
 
   def __call__(self, x:Tensor) -> Tensor:
     # x = cast(Tensor, self.l1(x).relu().max_pool2d((2,2)))
     # x = cast(Tensor, self.l2(x).relu().max_pool2d((2,2)))
+    print("HET DEBUG input x.shape: ", x.shape)
     x = self.l1(x).relu().max_pool2d((2,2))
     x = self.l2(x).relu().max_pool2d((2,2))
-    return self.l3(x.flatten(1).dropout(0.5))
+    result = self.l3(x.flatten(1).dropout(0.5))
+    print("HET DEBUG result.shape: ", result.shape)
+    return result
   
 X_train, Y_train, X_test, Y_test = mnist(device="TTNN")
 print(X_train.shape, X_train.dtype, Y_train.shape, Y_train.dtype)

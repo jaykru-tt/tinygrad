@@ -279,24 +279,11 @@ class TTNNProgram:
             break
 
         if def_uop_idx is not None and self.uops_data[def_uop_idx][0] is Ops.DEFINE_LOCAL:
-          # LOAD from local buffer
+          # LOAD from local buffer: return stored tensor as-is. Local STORE already wrote the
+          # correct result tensor for subsequent ops; reshaping here can violate volume.
           if def_uop_idx not in local_tensors:
             raise RuntimeError("TTNN LOAD: local buffer not initialized")
-          base_tensor = local_tensors[def_uop_idx]
-          final_tensor = base_tensor
-          if shape_strides is not None:
-            shp, std = shape_strides
-            # reshape to broadcast-friendly shape: zero-stride dims -> 1
-            bshape = tuple(int(shp[d]) if std[d] != 0 else 1 for d in range(len(shp)))
-            if hasattr(base_tensor, "shape"):
-              numel = 1
-              for v in getattr(base_tensor, "shape"):
-                numel *= int(v)
-              if math.prod(bshape) == numel:
-                final_tensor = ttnn.reshape(base_tensor, bshape)
-              elif shape_hint is not None and math.prod(shape_hint) == numel:
-                final_tensor = ttnn.reshape(base_tensor, tuple(shape_hint))
-          values[i] = final_tensor
+          values[i] = local_tensors[def_uop_idx]
           continue
 
         if buf_idx is None or buf_idx >= len(bufs):
@@ -316,23 +303,19 @@ class TTNNProgram:
         final_tensor = base_tensor
         if shape_strides is not None:
           shp, std = shape_strides
-          nz = [(d, s) for d, s in enumerate(std) if s != 0]
-          if len(nz) == 0:
+          nb_dims = [d for d,s in enumerate(std) if s != 0]
+          if not nb_dims:
             final_tensor = ttnn.reshape(base_tensor, (1,)*len(shp))
-          elif len(nz) == len(shp):
-            if shape_hint is not None:
-              final_tensor = ttnn.reshape(base_tensor, tuple(shape_hint))
-            else:
-              final_tensor = base_tensor
           else:
-            bshape = tuple(int(shp[d]) if std[d] != 0 else 1 for d in range(len(shp)))
-            if math.prod(bshape) == numel:
-              final_tensor = ttnn.reshape(base_tensor, bshape)
-            elif shape_hint is not None and math.prod(shape_hint) == numel:
-              final_tensor = ttnn.reshape(base_tensor, tuple(shape_hint))
-            else:
-              r = int(math.isqrt(numel)); c = int(numel // r) if r != 0 else int(numel)
-              final_tensor = ttnn.reshape(base_tensor, (r, c))
+            # stride-aware realize: reshape to non-broadcast dims (sorted by stride), then permute to original order, then add broadcast dims
+            base_order = tuple(sorted(nb_dims, key=lambda d: int(std[d]), reverse=True))      # major stride first
+            base_shape = tuple(int(shp[d]) for d in base_order)
+            tmp = ttnn.reshape(base_tensor, base_shape)
+            # permute tmp axes to match original non-broadcast dims order
+            perm = tuple(base_order.index(d) for d in nb_dims)
+            tmp = ttnn.permute(tmp, perm) if len(perm) > 1 else tmp
+            full_shape = tuple(int(shp[d]) if d in nb_dims else 1 for d in range(len(shp)))
+            final_tensor = ttnn.reshape(tmp, full_shape)
         else:
           final_tensor = ttnn.reshape(base_tensor, tuple(shape_hint)) if shape_hint is not None else base_tensor
         values[i] = final_tensor
