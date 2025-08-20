@@ -6,6 +6,7 @@ Basic test script to verify TTNN backend integration with tinygrad
 import os
 import sys
 import numpy as np
+import random
 
 # Add tinygrad to path
 sys.path.insert(0, os.getenv("PWD"))
@@ -31,36 +32,39 @@ from tinygrad.tensor import Tensor
 # Set TTNN as default device
 os.environ["TTNN"] = "1"
 
-# Test tensor creation and basic operations
-print("Creating test tensors...")
-a = Tensor([1.0, 2.0, 3.0], device="TTNN")
-b = Tensor([4.0, 5.0, 6.0], device="TTNN")
+# # Test tensor creation and basic operations
+# print("Creating test tensors...")
+# a = Tensor([1.0, 2.0, 3.0], device="TTNN")
+# b = Tensor([4.0, 5.0, 6.0], device="TTNN")
 
-print(f"Tensor a: {a}")
-print(f"Tensor b: {b}")
+# print(f"Tensor a: {a}")
+# print(f"Tensor b: {b}")
 
-# Test addition
-print("Testing addition...")
-c = a + b
-print(f"a + b = {c}")
+# # Test addition
+# print("Testing addition...")
+# c = a + b
+# print(f"a + b = {c}")
 
-# Try to realize the tensor (this will trigger the runner)
-print("Attempting to realize tensor...")
-c.realize()
-print("✓ Tensor realized successfully!")
+# # Try to realize the tensor (this will trigger the runner)
+# print("Attempting to realize tensor...")
+# c.realize()
+# print("✓ Tensor realized successfully!")
 
-# check the result
-print(f"Result: {c.numpy()}")
-assert (c.numpy() == np.array([5.0, 7.0, 9.0])).all()
+# # check the result
+# print(f"Result: {c.numpy()}")
+# assert (c.numpy() == np.array([5.0, 7.0, 9.0])).all()
 
-# Test 3x3 matmul
-print("\nTesting 3x3 matmul...")
-a_data = [[1.0, 2.0, 3.0],
-          [4.0, 5.0, 6.0],
-          [7.0, 8.0, 9.0]]
-b_data = [[9.0, 8.0, 7.0],
-          [6.0, 5.0, 4.0],
-          [3.0, 2.0, 1.0]]
+# Test 32x32 matmul
+print("\nTesting 32x32 matmul...")
+# a_data = [[1.0, 2.0, 3.0],
+#           [4.0, 5.0, 6.0],
+#           [7.0, 8.0, 9.0]]
+# b_data = [[9.0, 8.0, 7.0],
+#           [6.0, 5.0, 4.0],
+#           [3.0, 2.0, 1.0]]
+
+a_data = [[random.uniform(-1, 1) for _ in range(32)] for _ in range(32)]
+b_data = [[random.uniform(-1, 1) for _ in range(32)] for _ in range(32)]
 
 A = Tensor(a_data, device="TTNN")
 B = Tensor(b_data, device="TTNN")

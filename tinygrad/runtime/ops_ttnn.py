@@ -8,6 +8,7 @@ from tinygrad.uop.ops import UOp, PatternMatcher, UPat
 from tinygrad.uop import Ops, GroupOp
 from tinygrad.dtype import DType, dtypes
 from tinygrad.helpers import getenv, flatten
+import math
 
 def trace(s):
   return s
@@ -153,6 +154,7 @@ class TTNNProgram:
   def __call__(self, *bufs, global_size: tuple[int,int,int]=(1,1,1), local_size: tuple[int,int,int]=(1,1,1), vals: tuple[int, ...]=(), wait=False):
     """Execute the UOps by interpreting them directly with TTNN operations"""
     values = {}  # Store intermediate results by UOp index
+    local_tensors: dict[int, Any] = {}  # DEFINE_LOCAL storage
 
     # Precompute supported op maps based on available ttnn symbols (lowercase)
     def _mk_map(pairs):
@@ -263,16 +265,43 @@ class TTNNProgram:
         buf_idx = None
         shape_hint = None
         shape_strides = None
+        def_uop_idx = None
         for src_uop_idx in src_indices:
           # prefer shapes from VIEW nodes if present
           shape_hint = _shape_from_view_uop(src_uop_idx) or shape_hint
           shape_strides = _shape_strides_from_view_uop(src_uop_idx) or shape_strides
-          maybe_idx = _runtime_buf_index_from_any(src_uop_idx)
+          maybe_def = _resolve_define_uop_idx(src_uop_idx)
+          if def_uop_idx is None and maybe_def is not None:
+            def_uop_idx = maybe_def
+          maybe_idx = define_to_runtime_idx.get(maybe_def) if maybe_def is not None else None
           if maybe_idx is not None:
             buf_idx = maybe_idx
             break
+
+        if def_uop_idx is not None and self.uops_data[def_uop_idx][0] is Ops.DEFINE_LOCAL:
+          # LOAD from local buffer
+          if def_uop_idx not in local_tensors:
+            raise RuntimeError("TTNN LOAD: local buffer not initialized")
+          base_tensor = local_tensors[def_uop_idx]
+          final_tensor = base_tensor
+          if shape_strides is not None:
+            shp, std = shape_strides
+            # reshape to broadcast-friendly shape: zero-stride dims -> 1
+            bshape = tuple(int(shp[d]) if std[d] != 0 else 1 for d in range(len(shp)))
+            if hasattr(base_tensor, "shape"):
+              numel = 1
+              for v in getattr(base_tensor, "shape"):
+                numel *= int(v)
+              if math.prod(bshape) == numel:
+                final_tensor = ttnn.reshape(base_tensor, bshape)
+              elif shape_hint is not None and math.prod(shape_hint) == numel:
+                final_tensor = ttnn.reshape(base_tensor, tuple(shape_hint))
+          values[i] = final_tensor
+          continue
+
         if buf_idx is None or buf_idx >= len(bufs):
           raise RuntimeError("TTNN LOAD: unable to resolve source buffer")
+
         # Choose shape hint only if it matches buffer size; else fallback to flat
         buf_obj = bufs[buf_idx]
         try:
@@ -289,44 +318,22 @@ class TTNNProgram:
           shp, std = shape_strides
           nz = [(d, s) for d, s in enumerate(std) if s != 0]
           if len(nz) == 0:
-            # all broadcast, just make a scalar then expand (will broadcast later in ops)
             final_tensor = ttnn.reshape(base_tensor, (1,)*len(shp))
           elif len(nz) == len(shp):
-            # no broadcasting, reshape directly to hint if valid
             if shape_hint is not None:
               final_tensor = ttnn.reshape(base_tensor, tuple(shape_hint))
             else:
               final_tensor = base_tensor
-          elif len(nz) == 2:
-            # common matmul lowering pattern: two data dims and one broadcast dim
-            # order non-zero dims by stride (major -> minor)
-            nz_sorted = sorted(nz, key=lambda x: x[1], reverse=True)
-            base2d_shape = (int(shp[nz_sorted[0][0]]), int(shp[nz_sorted[1][0]]))
-            # reshape flat to base2d
-            tmp = ttnn.reshape(base_tensor, base2d_shape)
-            # extend to N dims by appending ones
-            tmp = ttnn.reshape(tmp, base2d_shape + (1,)*(len(shp)-2))
-            # build perm to place axes at correct dims
-            # mapping from view dim -> axis index in base2d
-            axis_map = {nz_sorted[0][0]: 0, nz_sorted[1][0]: 1}
-            # target positions for axis 0 and 1
-            pos0 = next(idx for idx, d in enumerate(range(len(shp))) if axis_map.get(d, -1) == 0)
-            pos1 = next(idx for idx, d in enumerate(range(len(shp))) if axis_map.get(d, -1) == 1)
-            # current axes are [0,1,2,3,...] where 2.. are singleton dims
-            perm = [None]*len(shp)
-            perm[pos0] = 0
-            perm[pos1] = 1
-            # fill remaining with the singleton axes in order
-            single_axes = [ax for ax in range(2, len(shp))]
-            for idx in range(len(shp)):
-              if perm[idx] is None:
-                perm[idx] = single_axes.pop(0)
-            final_tensor = ttnn.permute(tmp, tuple(perm))
           else:
-            # fallback: try to reshape to shape hint
-            final_tensor = ttnn.reshape(base_tensor, tuple(shape_hint) if shape_hint is not None else (numel,))
+            bshape = tuple(int(shp[d]) if std[d] != 0 else 1 for d in range(len(shp)))
+            if math.prod(bshape) == numel:
+              final_tensor = ttnn.reshape(base_tensor, bshape)
+            elif shape_hint is not None and math.prod(shape_hint) == numel:
+              final_tensor = ttnn.reshape(base_tensor, tuple(shape_hint))
+            else:
+              r = int(math.isqrt(numel)); c = int(numel // r) if r != 0 else int(numel)
+              final_tensor = ttnn.reshape(base_tensor, (r, c))
         else:
-          # no view info, reshape to hint if valid
           final_tensor = ttnn.reshape(base_tensor, tuple(shape_hint)) if shape_hint is not None else base_tensor
         values[i] = final_tensor
         continue
@@ -463,15 +470,19 @@ class TTNNProgram:
         result_tensor = src_values[1] if len(src_values) > 1 else (src_values[0] if src_values else None)
         if result_tensor is None:
           raise RuntimeError("TTNN STORE: missing result tensor")
-        out_buf_idx = None
-        for src_uop_idx in src_indices:
-          maybe_idx = _runtime_buf_index_from_any(src_uop_idx)
-          if maybe_idx is not None:
-            out_buf_idx = maybe_idx
-            break
+
+        # first source is the destination pointer; resolve to DEFINE_*
+        dest_ptr_uop = src_indices[0] if src_indices else None
+        dest_def = _resolve_define_uop_idx(dest_ptr_uop) if dest_ptr_uop is not None else None
+
+        if dest_def is not None and self.uops_data[dest_def][0] is Ops.DEFINE_LOCAL:
+          # store into local map
+          local_tensors[dest_def] = result_tensor
+          continue
+
+        out_buf_idx = define_to_runtime_idx.get(dest_def) if dest_def is not None else None
         if out_buf_idx is None or out_buf_idx >= len(bufs):
           raise RuntimeError("TTNN STORE: unable to resolve destination buffer")
-        # Store TTNN tensor directly
         bufs[out_buf_idx]["ttnn_tensor"] = result_tensor
         continue
       
