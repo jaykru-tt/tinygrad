@@ -55,8 +55,10 @@ def _get_rewrites_for_renderer(opts:Renderer, linearizer:bool, _QUANTIZE, _DEVEC
   ret.extend(rewrites_for_views)
 
   # this is kernel.py
-  ret.append(RewriteStep(pm_optimize, ctx=lambda _: opts, name="optimize ast"))
-
+  # TTNN: Skip optimize ast to avoid complex tiling that creates high-rank tensors
+  if getattr(opts, 'device', None) != "TTNN":
+    ret.append(RewriteStep(pm_optimize, ctx=lambda _: opts, name="optimize ast"))
+  
   if getattr(opts, 'device', None) != "TTNN":
     if _QUANTIZE and opts.device in {"CPU", "DSP"}: ret.append(RewriteStep(pm_quant, name="quantize"))
     ret.append(RewriteStep(pm_lowerer, get_index, name="lowerer", bottom_up=True))
@@ -72,7 +74,6 @@ def _get_rewrites_for_renderer(opts:Renderer, linearizer:bool, _QUANTIZE, _DEVEC
     ret.append(RewriteStep(pm_reduce+gep_pushing, lambda _: ReduceContext(), name="remove_reduce"))
 
     # add gpu dims (late) — skip for TTNN which runs single-worker without SPECIAL
-
     ret.append(RewriteStep(pm_add_gpudims, lambda _: opts, name="add gpudims"))
 
     # devectorize (TODO: does this need opts?)
@@ -94,6 +95,21 @@ def _get_rewrites_for_renderer(opts:Renderer, linearizer:bool, _QUANTIZE, _DEVEC
     # final rules for the renderer (without sym)
     pm_final_rewrite = pm_decomp+pm_render+extra_matcher
     ret.append(RewriteStep(pm_final_rewrite, lambda _: opts.device, name="final rewrite"))
+  else:
+    # TTNN: Minimal passes for single-worker execution without tiling
+    # We need lowering to handle REDUCE_AXIS -> explicit indexing
+    ret.append(RewriteStep(pm_lowerer, get_index, name="lowerer", bottom_up=True))
+    
+    # Basic symbolic simplification
+    ret.append(RewriteStep(sym, name="initial symbolic"))
+    
+    # Remove reduces (converts REDUCE to accumulator pattern)
+    ret.append(RewriteStep(pm_reduce+gep_pushing, lambda _: ReduceContext(), name="remove_reduce"))
+    
+    # Basic decompositions without complex transformations
+    supported_ops = tuple(opts.code_for_op.keys()) if hasattr(opts, 'code_for_op') else ()
+    pm_decomp = symbolic_simple+get_late_rewrite_patterns(supported_ops, False)
+    ret.append(RewriteStep(pm_decomp, name="decompositions"))
 
   # return the list (with optional linearizer)
   return ret + (rewrites_for_linearizer if linearizer else [])

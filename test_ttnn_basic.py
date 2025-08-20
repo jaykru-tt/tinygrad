@@ -55,7 +55,7 @@ os.environ["TTNN"] = "1"
 # assert (c.numpy() == np.array([5.0, 7.0, 9.0])).all()
 
 # Test 32x32 matmul
-print("\nTesting 32x32 matmul...")
+print("\nTesting [64, 32] @ [32, 64]...")
 # a_data = [[1.0, 2.0, 3.0],
 #           [4.0, 5.0, 6.0],
 #           [7.0, 8.0, 9.0]]
@@ -63,8 +63,8 @@ print("\nTesting 32x32 matmul...")
 #           [6.0, 5.0, 4.0],
 #           [3.0, 2.0, 1.0]]
 
-a_data = [[random.uniform(-1, 1) for _ in range(32)] for _ in range(32)]
-b_data = [[random.uniform(-1, 1) for _ in range(32)] for _ in range(32)]
+a_data = [[random.uniform(-1, 1) for _ in range(32)] for _ in range(64)]
+b_data = [[random.uniform(-1, 1) for _ in range(64)] for _ in range(32)]
 
 A = Tensor(a_data, device="TTNN")
 B = Tensor(b_data, device="TTNN")

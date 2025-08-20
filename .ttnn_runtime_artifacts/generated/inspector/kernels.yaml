@@ -1,0 +1,1290 @@
+- kernel:
+    watcher_kernel_id: 3
+    name: cq_dispatch_subordinate
+    path: /home/hshah/.cache/tt-metal-cache/b0f096ed68/4096/kernels/cq_dispatch_subordinate/6249883864897198822/
+    source: tt_metal/impl/dispatch/kernels/cq_dispatch_subordinate.cpp
+    program_id: 0
+- kernel:
+    watcher_kernel_id: 2
+    name: cq_dispatch
+    path: /home/hshah/.cache/tt-metal-cache/b0f096ed68/4096/kernels/cq_dispatch/1866464604083913628/
+    source: tt_metal/impl/dispatch/kernels/cq_dispatch.cpp
+    program_id: 0
+- kernel:
+    watcher_kernel_id: 1
+    name: cq_prefetch
+    path: /home/hshah/.cache/tt-metal-cache/b0f096ed68/4096/kernels/cq_prefetch/17842962478362073097/
+    source: tt_metal/impl/dispatch/kernels/cq_prefetch.cpp
+    program_id: 0
+- kernel:
+    watcher_kernel_id: 4
+    name: reader_reshape_tiled
+    path: /home/hshah/.cache/tt-metal-cache/b0f096ed68/4096/kernels/reader_reshape_tiled/18214392868894106733/
+    source: ttnn/cpp/ttnn/operations/data_movement/reshape_view/device/device/dataflow/reader_reshape_tiled.cpp
+    program_id: 1
+- kernel:
+    watcher_kernel_id: 5
+    name: writer_reshape_tiled
+    path: /home/hshah/.cache/tt-metal-cache/b0f096ed68/4096/kernels/writer_reshape_tiled/16675813124582975044/
+    source: ttnn/cpp/ttnn/operations/data_movement/reshape_view/device/device/dataflow/writer_reshape_tiled.cpp
+    program_id: 1
+- kernel:
+    watcher_kernel_id: 7
+    name: writer_reshape_tiled
+    path: /home/hshah/.cache/tt-metal-cache/b0f096ed68/4096/kernels/writer_reshape_tiled/16675813124582975044/
+    source: ttnn/cpp/ttnn/operations/data_movement/reshape_view/device/device/dataflow/writer_reshape_tiled.cpp
+    program_id: 3
+- kernel:
+    watcher_kernel_id: 6
+    name: reader_reshape_tiled
+    path: /home/hshah/.cache/tt-metal-cache/b0f096ed68/4096/kernels/reader_reshape_tiled/18214392868894106733/
+    source: ttnn/cpp/ttnn/operations/data_movement/reshape_view/device/device/dataflow/reader_reshape_tiled.cpp
+    program_id: 3
+- kernel:
+    watcher_kernel_id: 8
+    name: reader_unary_transpose_wh_interleaved_start_id
+    path: /home/hshah/.cache/tt-metal-cache/b0f096ed68/4096/kernels/reader_unary_transpose_wh_interleaved_start_id/516613752915030905/
+    source: ttnn/cpp/ttnn/operations/data_movement/transpose/device/kernels/dataflow/reader_unary_transpose_wh_interleaved_start_id.cpp
+    program_id: 5
+- kernel:
+    watcher_kernel_id: 9
+    name: writer_unary_interleaved_start_id
+    path: /home/hshah/.cache/tt-metal-cache/b0f096ed68/4096/kernels/writer_unary_interleaved_start_id/8990598549448201123/
+    source: ttnn/cpp/ttnn/operations/eltwise/unary/device/kernels/dataflow/writer_unary_interleaved_start_id.cpp
+    program_id: 5
+- kernel:
+    watcher_kernel_id: 10
+    name: transpose_wh
+    path: /home/hshah/.cache/tt-metal-cache/b0f096ed68/4096/kernels/transpose_wh/8342303038959678019/
+    source: ttnn/cpp/ttnn/operations/data_movement/transpose/device/kernels/compute/transpose_wh.cpp
+    program_id: 5
+- kernel:
+    watcher_kernel_id: 11
+    name: reader_permute_interleaved_tiled_generic
+    path: /home/hshah/.cache/tt-metal-cache/b0f096ed68/4096/kernels/reader_permute_interleaved_tiled_generic/16227120409817242152/
+    source: ttnn/cpp/ttnn/operations/data_movement/permute/device/kernels/dataflow/reader_permute_interleaved_tiled_generic.cpp
+    program_id: 7
+- kernel:
+    watcher_kernel_id: 13
+    name: writer_permute_interleaved_tiled_generic
+    path: /home/hshah/.cache/tt-metal-cache/b0f096ed68/4096/kernels/writer_permute_interleaved_tiled_generic/13734602951635670333/
+    source: ttnn/cpp/ttnn/operations/data_movement/permute/device/kernels/dataflow/writer_permute_interleaved_tiled_generic.cpp
+    program_id: 7
+- kernel:
+    watcher_kernel_id: 12
+    name: transpose_xw_tiled
+    path: /home/hshah/.cache/tt-metal-cache/b0f096ed68/4096/kernels/transpose_xw_tiled/9102875414070527210/
+    source: ttnn/cpp/ttnn/operations/data_movement/permute/device/kernels/compute/transpose_xw_tiled.cpp
+    program_id: 7
+- kernel:
+    watcher_kernel_id: 14
+    name: reader_unary_interleaved_start_id
+    path: /home/hshah/.cache/tt-metal-cache/b0f096ed68/4096/kernels/reader_unary_interleaved_start_id/12320960948475709456/
+    source: ttnn/cpp/ttnn/operations/eltwise/unary/device/kernels/dataflow/reader_unary_interleaved_start_id.cpp
+    program_id: 9
+- kernel:
+    watcher_kernel_id: 15
+    name: writer_unary_stick_layout_split_rows_multicore
+    path: /home/hshah/.cache/tt-metal-cache/b0f096ed68/4096/kernels/writer_unary_stick_layout_split_rows_multicore/216682018418486606/
+    source: ttnn/cpp/ttnn/operations/data_movement/untilize_with_unpadding/device/kernels/dataflow/writer_unary_stick_layout_split_rows_multicore.cpp
+    program_id: 9
+- kernel:
+    watcher_kernel_id: 16
+    name: pack_untilize
+    path: /home/hshah/.cache/tt-metal-cache/b0f096ed68/4096/kernels/pack_untilize/638370247388372442/
+    source: ttnn/cpp/ttnn/operations/data_movement/untilize/device/kernels/compute/pack_untilize.cpp
+    program_id: 9
+- kernel:
+    watcher_kernel_id: 17
+    name: repeat_higher_dim_rm
+    path: /home/hshah/.cache/tt-metal-cache/b0f096ed68/4096/kernels/repeat_higher_dim_rm/7896967282344865158/
+    source: ttnn/cpp/ttnn/operations/data_movement/repeat/device/device/repeat_higher_dim_rm.cpp
+    program_id: 11
+- kernel:
+    watcher_kernel_id: 19
+    name: writer_unary_interleaved_start_id
+    path: /home/hshah/.cache/tt-metal-cache/b0f096ed68/4096/kernels/writer_unary_interleaved_start_id/8990598549448201123/
+    source: ttnn/cpp/ttnn/operations/eltwise/unary/device/kernels/dataflow/writer_unary_interleaved_start_id.cpp
+    program_id: 13
+- kernel:
+    watcher_kernel_id: 18
+    name: reader_unary_pad_dims_split_rows_multicore
+    path: /home/hshah/.cache/tt-metal-cache/b0f096ed68/4096/kernels/reader_unary_pad_dims_split_rows_multicore/7428853018143277576/
+    source: ttnn/cpp/ttnn/operations/data_movement/tilize_with_val_padding/device/kernels/dataflow/reader_unary_pad_dims_split_rows_multicore.cpp
+    program_id: 13
+- kernel:
+    watcher_kernel_id: 20
+    name: tilize
+    path: /home/hshah/.cache/tt-metal-cache/b0f096ed68/4096/kernels/tilize/5472206354555443292/
+    source: ttnn/cpp/ttnn/deprecated/tt_dnn/kernels/compute/tilize.cpp
+    program_id: 13
+- kernel:
+    watcher_kernel_id: 22
+    name: writer_unary_interleaved_input_cols_batched
+    path: /home/hshah/.cache/tt-metal-cache/b0f096ed68/4096/kernels/writer_unary_interleaved_input_cols_batched/579398436225191894/
+    source: ttnn/cpp/ttnn/operations/eltwise/binary/device/kernels/dataflow/writer_unary_interleaved_input_cols_batched.cpp
+    program_id: 15
+- kernel:
+    watcher_kernel_id: 21
+    name: reader_bcast_h_interleaved_input_rows_partitioned
+    path: /home/hshah/.cache/tt-metal-cache/b0f096ed68/4096/kernels/reader_bcast_h_interleaved_input_rows_partitioned/39525818507867897/
+    source: ttnn/cpp/ttnn/operations/data_movement/bcast/device/kernels/dataflow/reader_bcast_h_interleaved_input_rows_partitioned.cpp
+    program_id: 15
+- kernel:
+    watcher_kernel_id: 23
+    name: bcast_h
+    path: /home/hshah/.cache/tt-metal-cache/b0f096ed68/4096/kernels/bcast_h/3968965498855712042/
+    source: ttnn/cpp/ttnn/operations/eltwise/binary/device/kernels/compute/bcast_h.cpp
+    program_id: 15
+- kernel:
+    watcher_kernel_id: 24
+    name: fill_pad_writer
+    path: /home/hshah/.cache/tt-metal-cache/b0f096ed68/4096/kernels/fill_pad_writer/17672247613530604163/
+    source: ttnn/cpp/ttnn/operations/data_movement/fill_pad/device/kernels/dataflow/fill_pad_writer.cpp
+    program_id: 17
+- kernel:
+    watcher_kernel_id: 26
+    name: writer_unary_universal_start_id
+    path: /home/hshah/.cache/tt-metal-cache/b0f096ed68/4096/kernels/writer_unary_universal_start_id/11263432783783311748/
+    source: ttnn/cpp/ttnn/operations/eltwise/unary/device/kernels/dataflow/writer_unary_universal_start_id.cpp
+    program_id: 19
+- kernel:
+    watcher_kernel_id: 25
+    name: reader_unary_reduce_universal_start_id
+    path: /home/hshah/.cache/tt-metal-cache/b0f096ed68/4096/kernels/reader_unary_reduce_universal_start_id/6662838265979580063/
+    source: ttnn/cpp/ttnn/operations/reduction/generic/device/kernels/dataflow/reader_unary_reduce_universal_start_id.cpp
+    program_id: 19
+- kernel:
+    watcher_kernel_id: 27
+    name: reduce_w
+    path: /home/hshah/.cache/tt-metal-cache/b0f096ed68/4096/kernels/reduce_w/9857570557770475357/
+    source: ttnn/cpp/ttnn/operations/reduction/generic/device/kernels/compute/reduce_w.cpp
+    program_id: 19
+- kernel:
+    watcher_kernel_id: 28
+    name: reader_reshape_tiled
+    path: /home/hshah/.cache/tt-metal-cache/b0f096ed68/4096/kernels/reader_reshape_tiled/15183740196074717207/
+    source: ttnn/cpp/ttnn/operations/data_movement/reshape_view/device/device/dataflow/reader_reshape_tiled.cpp
+    program_id: 21
+- kernel:
+    watcher_kernel_id: 29
+    name: writer_reshape_tiled
+    path: /home/hshah/.cache/tt-metal-cache/b0f096ed68/4096/kernels/writer_reshape_tiled/8175461416742486689/
+    source: ttnn/cpp/ttnn/operations/data_movement/reshape_view/device/device/dataflow/writer_reshape_tiled.cpp
+    program_id: 21
+- kernel:
+    watcher_kernel_id: 30
+    name: reader_unary_interleaved_start_id
+    path: /home/hshah/.cache/tt-metal-cache/b0f096ed68/4096/kernels/reader_unary_interleaved_start_id/12320960948475709456/
+    source: ttnn/cpp/ttnn/operations/eltwise/unary/device/kernels/dataflow/reader_unary_interleaved_start_id.cpp
+    program_id: 23
+- kernel:
+    watcher_kernel_id: 32
+    name: pack_untilize
+    path: /home/hshah/.cache/tt-metal-cache/b0f096ed68/4096/kernels/pack_untilize/638370247388372442/
+    source: ttnn/cpp/ttnn/operations/data_movement/untilize/device/kernels/compute/pack_untilize.cpp
+    program_id: 23
+- kernel:
+    watcher_kernel_id: 31
+    name: writer_unary_stick_layout_split_rows_multicore
+    path: /home/hshah/.cache/tt-metal-cache/b0f096ed68/4096/kernels/writer_unary_stick_layout_split_rows_multicore/438365932851637356/
+    source: ttnn/cpp/ttnn/operations/data_movement/untilize_with_unpadding/device/kernels/dataflow/writer_unary_stick_layout_split_rows_multicore.cpp
+    program_id: 23
+- kernel:
+    watcher_kernel_id: 35
+    name: pack_untilize
+    path: /home/hshah/.cache/tt-metal-cache/b0f096ed68/4096/kernels/pack_untilize/638370247388372442/
+    source: ttnn/cpp/ttnn/operations/data_movement/untilize/device/kernels/compute/pack_untilize.cpp
+    program_id: 25
+- kernel:
+    watcher_kernel_id: 33
+    name: reader_unary_interleaved_start_id
+    path: /home/hshah/.cache/tt-metal-cache/b0f096ed68/4096/kernels/reader_unary_interleaved_start_id/12320960948475709456/
+    source: ttnn/cpp/ttnn/operations/eltwise/unary/device/kernels/dataflow/reader_unary_interleaved_start_id.cpp
+    program_id: 25
+- kernel:
+    watcher_kernel_id: 34
+    name: writer_unary_stick_layout_split_rows_multicore
+    path: /home/hshah/.cache/tt-metal-cache/b0f096ed68/4096/kernels/writer_unary_stick_layout_split_rows_multicore/216682018418486606/
+    source: ttnn/cpp/ttnn/operations/data_movement/untilize_with_unpadding/device/kernels/dataflow/writer_unary_stick_layout_split_rows_multicore.cpp
+    program_id: 25
+- kernel:
+    watcher_kernel_id: 36
+    name: reader_reshape_tiled
+    path: /home/hshah/.cache/tt-metal-cache/b0f096ed68/4096/kernels/reader_reshape_tiled/8957048405573585836/
+    source: ttnn/cpp/ttnn/operations/data_movement/reshape_view/device/device/dataflow/reader_reshape_tiled.cpp
+    program_id: 27
+- kernel:
+    watcher_kernel_id: 37
+    name: writer_reshape_tiled
+    path: /home/hshah/.cache/tt-metal-cache/b0f096ed68/4096/kernels/writer_reshape_tiled/18233504306376399057/
+    source: ttnn/cpp/ttnn/operations/data_movement/reshape_view/device/device/dataflow/writer_reshape_tiled.cpp
+    program_id: 27
+- kernel:
+    watcher_kernel_id: 38
+    name: reader_reshape_tiled
+    path: /home/hshah/.cache/tt-metal-cache/b0f096ed68/4096/kernels/reader_reshape_tiled/18010556271883885938/
+    source: ttnn/cpp/ttnn/operations/data_movement/reshape_view/device/device/dataflow/reader_reshape_tiled.cpp
+    program_id: 29
+- kernel:
+    watcher_kernel_id: 39
+    name: writer_reshape_tiled
+    path: /home/hshah/.cache/tt-metal-cache/b0f096ed68/4096/kernels/writer_reshape_tiled/15725283267736302931/
+    source: ttnn/cpp/ttnn/operations/data_movement/reshape_view/device/device/dataflow/writer_reshape_tiled.cpp
+    program_id: 29
+- kernel:
+    watcher_kernel_id: 42
+    name: transpose_wh
+    path: /home/hshah/.cache/tt-metal-cache/b0f096ed68/4096/kernels/transpose_wh/8342303038959678019/
+    source: ttnn/cpp/ttnn/operations/data_movement/transpose/device/kernels/compute/transpose_wh.cpp
+    program_id: 31
+- kernel:
+    watcher_kernel_id: 40
+    name: reader_unary_transpose_wh_interleaved_start_id
+    path: /home/hshah/.cache/tt-metal-cache/b0f096ed68/4096/kernels/reader_unary_transpose_wh_interleaved_start_id/516613752915030905/
+    source: ttnn/cpp/ttnn/operations/data_movement/transpose/device/kernels/dataflow/reader_unary_transpose_wh_interleaved_start_id.cpp
+    program_id: 31
+- kernel:
+    watcher_kernel_id: 41
+    name: writer_unary_interleaved_start_id
+    path: /home/hshah/.cache/tt-metal-cache/b0f096ed68/4096/kernels/writer_unary_interleaved_start_id/8990598549448201123/
+    source: ttnn/cpp/ttnn/operations/eltwise/unary/device/kernels/dataflow/writer_unary_interleaved_start_id.cpp
+    program_id: 31
+- kernel:
+    watcher_kernel_id: 44
+    name: transpose_xw_tiled
+    path: /home/hshah/.cache/tt-metal-cache/b0f096ed68/4096/kernels/transpose_xw_tiled/9102875414070527210/
+    source: ttnn/cpp/ttnn/operations/data_movement/permute/device/kernels/compute/transpose_xw_tiled.cpp
+    program_id: 33
+- kernel:
+    watcher_kernel_id: 43
+    name: reader_permute_interleaved_tiled_generic
+    path: /home/hshah/.cache/tt-metal-cache/b0f096ed68/4096/kernels/reader_permute_interleaved_tiled_generic/7328312644608249772/
+    source: ttnn/cpp/ttnn/operations/data_movement/permute/device/kernels/dataflow/reader_permute_interleaved_tiled_generic.cpp
+    program_id: 33
+- kernel:
+    watcher_kernel_id: 45
+    name: writer_permute_interleaved_tiled_generic
+    path: /home/hshah/.cache/tt-metal-cache/b0f096ed68/4096/kernels/writer_permute_interleaved_tiled_generic/17787825371214599257/
+    source: ttnn/cpp/ttnn/operations/data_movement/permute/device/kernels/dataflow/writer_permute_interleaved_tiled_generic.cpp
+    program_id: 33
+- kernel:
+    watcher_kernel_id: 48
+    name: pack_untilize
+    path: /home/hshah/.cache/tt-metal-cache/b0f096ed68/4096/kernels/pack_untilize/638370247388372442/
+    source: ttnn/cpp/ttnn/operations/data_movement/untilize/device/kernels/compute/pack_untilize.cpp
+    program_id: 35
+- kernel:
+    watcher_kernel_id: 46
+    name: reader_unary_interleaved_start_id
+    path: /home/hshah/.cache/tt-metal-cache/b0f096ed68/4096/kernels/reader_unary_interleaved_start_id/12320960948475709456/
+    source: ttnn/cpp/ttnn/operations/eltwise/unary/device/kernels/dataflow/reader_unary_interleaved_start_id.cpp
+    program_id: 35
+- kernel:
+    watcher_kernel_id: 47
+    name: writer_unary_stick_layout_split_rows_multicore
+    path: /home/hshah/.cache/tt-metal-cache/b0f096ed68/4096/kernels/writer_unary_stick_layout_split_rows_multicore/11144736093251930345/
+    source: ttnn/cpp/ttnn/operations/data_movement/untilize_with_unpadding/device/kernels/dataflow/writer_unary_stick_layout_split_rows_multicore.cpp
+    program_id: 35
+- kernel:
+    watcher_kernel_id: 49
+    name: repeat_higher_dim_rm
+    path: /home/hshah/.cache/tt-metal-cache/b0f096ed68/4096/kernels/repeat_higher_dim_rm/7043885833507035564/
+    source: ttnn/cpp/ttnn/operations/data_movement/repeat/device/device/repeat_higher_dim_rm.cpp
+    program_id: 37
+- kernel:
+    watcher_kernel_id: 52
+    name: tilize
+    path: /home/hshah/.cache/tt-metal-cache/b0f096ed68/4096/kernels/tilize/5472206354555443292/
+    source: ttnn/cpp/ttnn/deprecated/tt_dnn/kernels/compute/tilize.cpp
+    program_id: 39
+- kernel:
+    watcher_kernel_id: 51
+    name: writer_unary_interleaved_start_id
+    path: /home/hshah/.cache/tt-metal-cache/b0f096ed68/4096/kernels/writer_unary_interleaved_start_id/8990598549448201123/
+    source: ttnn/cpp/ttnn/operations/eltwise/unary/device/kernels/dataflow/writer_unary_interleaved_start_id.cpp
+    program_id: 39
+- kernel:
+    watcher_kernel_id: 50
+    name: reader_unary_pad_dims_split_rows_multicore
+    path: /home/hshah/.cache/tt-metal-cache/b0f096ed68/4096/kernels/reader_unary_pad_dims_split_rows_multicore/4265195532284940525/
+    source: ttnn/cpp/ttnn/operations/data_movement/tilize_with_val_padding/device/kernels/dataflow/reader_unary_pad_dims_split_rows_multicore.cpp
+    program_id: 39
+- kernel:
+    watcher_kernel_id: 53
+    name: fill_pad_writer
+    path: /home/hshah/.cache/tt-metal-cache/b0f096ed68/4096/kernels/fill_pad_writer/2034974352182470858/
+    source: ttnn/cpp/ttnn/operations/data_movement/fill_pad/device/kernels/dataflow/fill_pad_writer.cpp
+    program_id: 41
+- kernel:
+    watcher_kernel_id: 55
+    name: writer_unary_universal_start_id
+    path: /home/hshah/.cache/tt-metal-cache/b0f096ed68/4096/kernels/writer_unary_universal_start_id/11263432783783311748/
+    source: ttnn/cpp/ttnn/operations/eltwise/unary/device/kernels/dataflow/writer_unary_universal_start_id.cpp
+    program_id: 43
+- kernel:
+    watcher_kernel_id: 54
+    name: reader_unary_reduce_universal_start_id
+    path: /home/hshah/.cache/tt-metal-cache/b0f096ed68/4096/kernels/reader_unary_reduce_universal_start_id/6662838265979580063/
+    source: ttnn/cpp/ttnn/operations/reduction/generic/device/kernels/dataflow/reader_unary_reduce_universal_start_id.cpp
+    program_id: 43
+- kernel:
+    watcher_kernel_id: 56
+    name: reduce_w
+    path: /home/hshah/.cache/tt-metal-cache/b0f096ed68/4096/kernels/reduce_w/9857570557770475357/
+    source: ttnn/cpp/ttnn/operations/reduction/generic/device/kernels/compute/reduce_w.cpp
+    program_id: 43
+- kernel:
+    watcher_kernel_id: 57
+    name: reader_reshape_tiled
+    path: /home/hshah/.cache/tt-metal-cache/b0f096ed68/4096/kernels/reader_reshape_tiled/18031236758307210753/
+    source: ttnn/cpp/ttnn/operations/data_movement/reshape_view/device/device/dataflow/reader_reshape_tiled.cpp
+    program_id: 45
+- kernel:
+    watcher_kernel_id: 58
+    name: writer_reshape_tiled
+    path: /home/hshah/.cache/tt-metal-cache/b0f096ed68/4096/kernels/writer_reshape_tiled/5147666048709135412/
+    source: ttnn/cpp/ttnn/operations/data_movement/reshape_view/device/device/dataflow/writer_reshape_tiled.cpp
+    program_id: 45
+- kernel:
+    watcher_kernel_id: 61
+    name: pack_untilize
+    path: /home/hshah/.cache/tt-metal-cache/b0f096ed68/4096/kernels/pack_untilize/638370247388372442/
+    source: ttnn/cpp/ttnn/operations/data_movement/untilize/device/kernels/compute/pack_untilize.cpp
+    program_id: 47
+- kernel:
+    watcher_kernel_id: 59
+    name: reader_unary_interleaved_start_id
+    path: /home/hshah/.cache/tt-metal-cache/b0f096ed68/4096/kernels/reader_unary_interleaved_start_id/12320960948475709456/
+    source: ttnn/cpp/ttnn/operations/eltwise/unary/device/kernels/dataflow/reader_unary_interleaved_start_id.cpp
+    program_id: 47
+- kernel:
+    watcher_kernel_id: 60
+    name: writer_unary_stick_layout_split_rows_multicore
+    path: /home/hshah/.cache/tt-metal-cache/b0f096ed68/4096/kernels/writer_unary_stick_layout_split_rows_multicore/33461480334547043/
+    source: ttnn/cpp/ttnn/operations/data_movement/untilize_with_unpadding/device/kernels/dataflow/writer_unary_stick_layout_split_rows_multicore.cpp
+    program_id: 47
+- kernel:
+    watcher_kernel_id: 62
+    name: reader_unary_interleaved_start_id
+    path: /home/hshah/.cache/tt-metal-cache/b0f096ed68/4096/kernels/reader_unary_interleaved_start_id/12320960948475709456/
+    source: ttnn/cpp/ttnn/operations/eltwise/unary/device/kernels/dataflow/reader_unary_interleaved_start_id.cpp
+    program_id: 49
+- kernel:
+    watcher_kernel_id: 63
+    name: writer_unary_stick_layout_split_rows_multicore
+    path: /home/hshah/.cache/tt-metal-cache/b0f096ed68/4096/kernels/writer_unary_stick_layout_split_rows_multicore/11144736093251930345/
+    source: ttnn/cpp/ttnn/operations/data_movement/untilize_with_unpadding/device/kernels/dataflow/writer_unary_stick_layout_split_rows_multicore.cpp
+    program_id: 49
+- kernel:
+    watcher_kernel_id: 64
+    name: pack_untilize
+    path: /home/hshah/.cache/tt-metal-cache/b0f096ed68/4096/kernels/pack_untilize/638370247388372442/
+    source: ttnn/cpp/ttnn/operations/data_movement/untilize/device/kernels/compute/pack_untilize.cpp
+    program_id: 49
+- kernel:
+    watcher_kernel_id: 65
+    name: reader_reshape_tiled
+    path: /home/hshah/.cache/tt-metal-cache/b0f096ed68/4096/kernels/reader_reshape_tiled/1017000955882447591/
+    source: ttnn/cpp/ttnn/operations/data_movement/reshape_view/device/device/dataflow/reader_reshape_tiled.cpp
+    program_id: 51
+- kernel:
+    watcher_kernel_id: 66
+    name: writer_reshape_tiled
+    path: /home/hshah/.cache/tt-metal-cache/b0f096ed68/4096/kernels/writer_reshape_tiled/5653824396150220751/
+    source: ttnn/cpp/ttnn/operations/data_movement/reshape_view/device/device/dataflow/writer_reshape_tiled.cpp
+    program_id: 51
+- kernel:
+    watcher_kernel_id: 68
+    name: writer_reshape_tiled
+    path: /home/hshah/.cache/tt-metal-cache/b0f096ed68/4096/kernels/writer_reshape_tiled/5653824396150220751/
+    source: ttnn/cpp/ttnn/operations/data_movement/reshape_view/device/device/dataflow/writer_reshape_tiled.cpp
+    program_id: 53
+- kernel:
+    watcher_kernel_id: 67
+    name: reader_reshape_tiled
+    path: /home/hshah/.cache/tt-metal-cache/b0f096ed68/4096/kernels/reader_reshape_tiled/1017000955882447591/
+    source: ttnn/cpp/ttnn/operations/data_movement/reshape_view/device/device/dataflow/reader_reshape_tiled.cpp
+    program_id: 53
+- kernel:
+    watcher_kernel_id: 70
+    name: writer_unary_interleaved_start_id
+    path: /home/hshah/.cache/tt-metal-cache/b0f096ed68/4096/kernels/writer_unary_interleaved_start_id/8990598549448201123/
+    source: ttnn/cpp/ttnn/operations/eltwise/unary/device/kernels/dataflow/writer_unary_interleaved_start_id.cpp
+    program_id: 55
+- kernel:
+    watcher_kernel_id: 69
+    name: reader_unary_transpose_wh_interleaved_start_id
+    path: /home/hshah/.cache/tt-metal-cache/b0f096ed68/4096/kernels/reader_unary_transpose_wh_interleaved_start_id/516613752915030905/
+    source: ttnn/cpp/ttnn/operations/data_movement/transpose/device/kernels/dataflow/reader_unary_transpose_wh_interleaved_start_id.cpp
+    program_id: 55
+- kernel:
+    watcher_kernel_id: 71
+    name: transpose_wh
+    path: /home/hshah/.cache/tt-metal-cache/b0f096ed68/4096/kernels/transpose_wh/8342303038959678019/
+    source: ttnn/cpp/ttnn/operations/data_movement/transpose/device/kernels/compute/transpose_wh.cpp
+    program_id: 55
+- kernel:
+    watcher_kernel_id: 73
+    name: transpose_xw_tiled
+    path: /home/hshah/.cache/tt-metal-cache/b0f096ed68/4096/kernels/transpose_xw_tiled/9102875414070527210/
+    source: ttnn/cpp/ttnn/operations/data_movement/permute/device/kernels/compute/transpose_xw_tiled.cpp
+    program_id: 57
+- kernel:
+    watcher_kernel_id: 72
+    name: reader_permute_interleaved_tiled_generic
+    path: /home/hshah/.cache/tt-metal-cache/b0f096ed68/4096/kernels/reader_permute_interleaved_tiled_generic/15552905832608493009/
+    source: ttnn/cpp/ttnn/operations/data_movement/permute/device/kernels/dataflow/reader_permute_interleaved_tiled_generic.cpp
+    program_id: 57
+- kernel:
+    watcher_kernel_id: 74
+    name: writer_permute_interleaved_tiled_generic
+    path: /home/hshah/.cache/tt-metal-cache/b0f096ed68/4096/kernels/writer_permute_interleaved_tiled_generic/13971397441174061684/
+    source: ttnn/cpp/ttnn/operations/data_movement/permute/device/kernels/dataflow/writer_permute_interleaved_tiled_generic.cpp
+    program_id: 57
+- kernel:
+    watcher_kernel_id: 77
+    name: pack_untilize
+    path: /home/hshah/.cache/tt-metal-cache/b0f096ed68/4096/kernels/pack_untilize/638370247388372442/
+    source: ttnn/cpp/ttnn/operations/data_movement/untilize/device/kernels/compute/pack_untilize.cpp
+    program_id: 59
+- kernel:
+    watcher_kernel_id: 75
+    name: reader_unary_interleaved_start_id
+    path: /home/hshah/.cache/tt-metal-cache/b0f096ed68/4096/kernels/reader_unary_interleaved_start_id/12320960948475709456/
+    source: ttnn/cpp/ttnn/operations/eltwise/unary/device/kernels/dataflow/reader_unary_interleaved_start_id.cpp
+    program_id: 59
+- kernel:
+    watcher_kernel_id: 76
+    name: writer_unary_stick_layout_split_rows_multicore
+    path: /home/hshah/.cache/tt-metal-cache/b0f096ed68/4096/kernels/writer_unary_stick_layout_split_rows_multicore/16832366471044686626/
+    source: ttnn/cpp/ttnn/operations/data_movement/untilize_with_unpadding/device/kernels/dataflow/writer_unary_stick_layout_split_rows_multicore.cpp
+    program_id: 59
+- kernel:
+    watcher_kernel_id: 78
+    name: repeat_higher_dim_rm
+    path: /home/hshah/.cache/tt-metal-cache/b0f096ed68/4096/kernels/repeat_higher_dim_rm/17295620910894678494/
+    source: ttnn/cpp/ttnn/operations/data_movement/repeat/device/device/repeat_higher_dim_rm.cpp
+    program_id: 61
+- kernel:
+    watcher_kernel_id: 81
+    name: tilize
+    path: /home/hshah/.cache/tt-metal-cache/b0f096ed68/4096/kernels/tilize/5472206354555443292/
+    source: ttnn/cpp/ttnn/deprecated/tt_dnn/kernels/compute/tilize.cpp
+    program_id: 63
+- kernel:
+    watcher_kernel_id: 80
+    name: writer_unary_interleaved_start_id
+    path: /home/hshah/.cache/tt-metal-cache/b0f096ed68/4096/kernels/writer_unary_interleaved_start_id/8990598549448201123/
+    source: ttnn/cpp/ttnn/operations/eltwise/unary/device/kernels/dataflow/writer_unary_interleaved_start_id.cpp
+    program_id: 63
+- kernel:
+    watcher_kernel_id: 79
+    name: reader_unary_pad_dims_split_rows_multicore
+    path: /home/hshah/.cache/tt-metal-cache/b0f096ed68/4096/kernels/reader_unary_pad_dims_split_rows_multicore/9828644601069920868/
+    source: ttnn/cpp/ttnn/operations/data_movement/tilize_with_val_padding/device/kernels/dataflow/reader_unary_pad_dims_split_rows_multicore.cpp
+    program_id: 63
+- kernel:
+    watcher_kernel_id: 82
+    name: fill_pad_writer
+    path: /home/hshah/.cache/tt-metal-cache/b0f096ed68/4096/kernels/fill_pad_writer/8813945181531874528/
+    source: ttnn/cpp/ttnn/operations/data_movement/fill_pad/device/kernels/dataflow/fill_pad_writer.cpp
+    program_id: 65
+- kernel:
+    watcher_kernel_id: 85
+    name: reduce_w
+    path: /home/hshah/.cache/tt-metal-cache/b0f096ed68/4096/kernels/reduce_w/9857570557770475357/
+    source: ttnn/cpp/ttnn/operations/reduction/generic/device/kernels/compute/reduce_w.cpp
+    program_id: 67
+- kernel:
+    watcher_kernel_id: 84
+    name: writer_unary_universal_start_id
+    path: /home/hshah/.cache/tt-metal-cache/b0f096ed68/4096/kernels/writer_unary_universal_start_id/11263432783783311748/
+    source: ttnn/cpp/ttnn/operations/eltwise/unary/device/kernels/dataflow/writer_unary_universal_start_id.cpp
+    program_id: 67
+- kernel:
+    watcher_kernel_id: 83
+    name: reader_unary_reduce_universal_start_id
+    path: /home/hshah/.cache/tt-metal-cache/b0f096ed68/4096/kernels/reader_unary_reduce_universal_start_id/6662838265979580063/
+    source: ttnn/cpp/ttnn/operations/reduction/generic/device/kernels/dataflow/reader_unary_reduce_universal_start_id.cpp
+    program_id: 67
+- kernel:
+    watcher_kernel_id: 86
+    name: reader_reshape_tiled
+    path: /home/hshah/.cache/tt-metal-cache/b0f096ed68/4096/kernels/reader_reshape_tiled/16033197454799490500/
+    source: ttnn/cpp/ttnn/operations/data_movement/reshape_view/device/device/dataflow/reader_reshape_tiled.cpp
+    program_id: 69
+- kernel:
+    watcher_kernel_id: 87
+    name: writer_reshape_tiled
+    path: /home/hshah/.cache/tt-metal-cache/b0f096ed68/4096/kernels/writer_reshape_tiled/1490448487706757254/
+    source: ttnn/cpp/ttnn/operations/data_movement/reshape_view/device/device/dataflow/writer_reshape_tiled.cpp
+    program_id: 69
+- kernel:
+    watcher_kernel_id: 88
+    name: reader_unary_interleaved_start_id
+    path: /home/hshah/.cache/tt-metal-cache/b0f096ed68/4096/kernels/reader_unary_interleaved_start_id/12320960948475709456/
+    source: ttnn/cpp/ttnn/operations/eltwise/unary/device/kernels/dataflow/reader_unary_interleaved_start_id.cpp
+    program_id: 71
+- kernel:
+    watcher_kernel_id: 89
+    name: writer_unary_stick_layout_split_rows_multicore
+    path: /home/hshah/.cache/tt-metal-cache/b0f096ed68/4096/kernels/writer_unary_stick_layout_split_rows_multicore/7732660461468903177/
+    source: ttnn/cpp/ttnn/operations/data_movement/untilize_with_unpadding/device/kernels/dataflow/writer_unary_stick_layout_split_rows_multicore.cpp
+    program_id: 71
+- kernel:
+    watcher_kernel_id: 90
+    name: pack_untilize
+    path: /home/hshah/.cache/tt-metal-cache/b0f096ed68/4096/kernels/pack_untilize/15202899330738373893/
+    source: ttnn/cpp/ttnn/operations/data_movement/untilize/device/kernels/compute/pack_untilize.cpp
+    program_id: 71
+- kernel:
+    watcher_kernel_id: 92
+    name: writer_unary_stick_layout_split_rows_multicore
+    path: /home/hshah/.cache/tt-metal-cache/b0f096ed68/4096/kernels/writer_unary_stick_layout_split_rows_multicore/16832366471044686626/
+    source: ttnn/cpp/ttnn/operations/data_movement/untilize_with_unpadding/device/kernels/dataflow/writer_unary_stick_layout_split_rows_multicore.cpp
+    program_id: 73
+- kernel:
+    watcher_kernel_id: 93
+    name: pack_untilize
+    path: /home/hshah/.cache/tt-metal-cache/b0f096ed68/4096/kernels/pack_untilize/638370247388372442/
+    source: ttnn/cpp/ttnn/operations/data_movement/untilize/device/kernels/compute/pack_untilize.cpp
+    program_id: 73
+- kernel:
+    watcher_kernel_id: 91
+    name: reader_unary_interleaved_start_id
+    path: /home/hshah/.cache/tt-metal-cache/b0f096ed68/4096/kernels/reader_unary_interleaved_start_id/12320960948475709456/
+    source: ttnn/cpp/ttnn/operations/eltwise/unary/device/kernels/dataflow/reader_unary_interleaved_start_id.cpp
+    program_id: 73
+- kernel:
+    watcher_kernel_id: 95
+    name: writer_reshape_tiled
+    path: /home/hshah/.cache/tt-metal-cache/b0f096ed68/4096/kernels/writer_reshape_tiled/5653824396150220751/
+    source: ttnn/cpp/ttnn/operations/data_movement/reshape_view/device/device/dataflow/writer_reshape_tiled.cpp
+    program_id: 75
+- kernel:
+    watcher_kernel_id: 94
+    name: reader_reshape_tiled
+    path: /home/hshah/.cache/tt-metal-cache/b0f096ed68/4096/kernels/reader_reshape_tiled/1017000955882447591/
+    source: ttnn/cpp/ttnn/operations/data_movement/reshape_view/device/device/dataflow/reader_reshape_tiled.cpp
+    program_id: 75
+- kernel:
+    watcher_kernel_id: 97
+    name: writer_reshape_tiled
+    path: /home/hshah/.cache/tt-metal-cache/b0f096ed68/4096/kernels/writer_reshape_tiled/5653824396150220751/
+    source: ttnn/cpp/ttnn/operations/data_movement/reshape_view/device/device/dataflow/writer_reshape_tiled.cpp
+    program_id: 77
+- kernel:
+    watcher_kernel_id: 96
+    name: reader_reshape_tiled
+    path: /home/hshah/.cache/tt-metal-cache/b0f096ed68/4096/kernels/reader_reshape_tiled/1017000955882447591/
+    source: ttnn/cpp/ttnn/operations/data_movement/reshape_view/device/device/dataflow/reader_reshape_tiled.cpp
+    program_id: 77
+- kernel:
+    watcher_kernel_id: 100
+    name: transpose_wh
+    path: /home/hshah/.cache/tt-metal-cache/b0f096ed68/4096/kernels/transpose_wh/8342303038959678019/
+    source: ttnn/cpp/ttnn/operations/data_movement/transpose/device/kernels/compute/transpose_wh.cpp
+    program_id: 79
+- kernel:
+    watcher_kernel_id: 99
+    name: writer_unary_interleaved_start_id
+    path: /home/hshah/.cache/tt-metal-cache/b0f096ed68/4096/kernels/writer_unary_interleaved_start_id/8990598549448201123/
+    source: ttnn/cpp/ttnn/operations/eltwise/unary/device/kernels/dataflow/writer_unary_interleaved_start_id.cpp
+    program_id: 79
+- kernel:
+    watcher_kernel_id: 98
+    name: reader_unary_transpose_wh_interleaved_start_id
+    path: /home/hshah/.cache/tt-metal-cache/b0f096ed68/4096/kernels/reader_unary_transpose_wh_interleaved_start_id/516613752915030905/
+    source: ttnn/cpp/ttnn/operations/data_movement/transpose/device/kernels/dataflow/reader_unary_transpose_wh_interleaved_start_id.cpp
+    program_id: 79
+- kernel:
+    watcher_kernel_id: 102
+    name: transpose_xw_tiled
+    path: /home/hshah/.cache/tt-metal-cache/b0f096ed68/4096/kernels/transpose_xw_tiled/9102875414070527210/
+    source: ttnn/cpp/ttnn/operations/data_movement/permute/device/kernels/compute/transpose_xw_tiled.cpp
+    program_id: 81
+- kernel:
+    watcher_kernel_id: 101
+    name: reader_permute_interleaved_tiled_generic
+    path: /home/hshah/.cache/tt-metal-cache/b0f096ed68/4096/kernels/reader_permute_interleaved_tiled_generic/285224909512985510/
+    source: ttnn/cpp/ttnn/operations/data_movement/permute/device/kernels/dataflow/reader_permute_interleaved_tiled_generic.cpp
+    program_id: 81
+- kernel:
+    watcher_kernel_id: 103
+    name: writer_permute_interleaved_tiled_generic
+    path: /home/hshah/.cache/tt-metal-cache/b0f096ed68/4096/kernels/writer_permute_interleaved_tiled_generic/8035462931400918673/
+    source: ttnn/cpp/ttnn/operations/data_movement/permute/device/kernels/dataflow/writer_permute_interleaved_tiled_generic.cpp
+    program_id: 81
+- kernel:
+    watcher_kernel_id: 106
+    name: pack_untilize
+    path: /home/hshah/.cache/tt-metal-cache/b0f096ed68/4096/kernels/pack_untilize/638370247388372442/
+    source: ttnn/cpp/ttnn/operations/data_movement/untilize/device/kernels/compute/pack_untilize.cpp
+    program_id: 83
+- kernel:
+    watcher_kernel_id: 104
+    name: reader_unary_interleaved_start_id
+    path: /home/hshah/.cache/tt-metal-cache/b0f096ed68/4096/kernels/reader_unary_interleaved_start_id/12320960948475709456/
+    source: ttnn/cpp/ttnn/operations/eltwise/unary/device/kernels/dataflow/reader_unary_interleaved_start_id.cpp
+    program_id: 83
+- kernel:
+    watcher_kernel_id: 105
+    name: writer_unary_stick_layout_split_rows_multicore
+    path: /home/hshah/.cache/tt-metal-cache/b0f096ed68/4096/kernels/writer_unary_stick_layout_split_rows_multicore/10024165127393004823/
+    source: ttnn/cpp/ttnn/operations/data_movement/untilize_with_unpadding/device/kernels/dataflow/writer_unary_stick_layout_split_rows_multicore.cpp
+    program_id: 83
+- kernel:
+    watcher_kernel_id: 107
+    name: repeat_higher_dim_rm
+    path: /home/hshah/.cache/tt-metal-cache/b0f096ed68/4096/kernels/repeat_higher_dim_rm/6744669645676727173/
+    source: ttnn/cpp/ttnn/operations/data_movement/repeat/device/device/repeat_higher_dim_rm.cpp
+    program_id: 85
+- kernel:
+    watcher_kernel_id: 110
+    name: tilize
+    path: /home/hshah/.cache/tt-metal-cache/b0f096ed68/4096/kernels/tilize/5472206354555443292/
+    source: ttnn/cpp/ttnn/deprecated/tt_dnn/kernels/compute/tilize.cpp
+    program_id: 87
+- kernel:
+    watcher_kernel_id: 109
+    name: writer_unary_interleaved_start_id
+    path: /home/hshah/.cache/tt-metal-cache/b0f096ed68/4096/kernels/writer_unary_interleaved_start_id/8990598549448201123/
+    source: ttnn/cpp/ttnn/operations/eltwise/unary/device/kernels/dataflow/writer_unary_interleaved_start_id.cpp
+    program_id: 87
+- kernel:
+    watcher_kernel_id: 108
+    name: reader_unary_pad_dims_split_rows_multicore
+    path: /home/hshah/.cache/tt-metal-cache/b0f096ed68/4096/kernels/reader_unary_pad_dims_split_rows_multicore/2238260901106655360/
+    source: ttnn/cpp/ttnn/operations/data_movement/tilize_with_val_padding/device/kernels/dataflow/reader_unary_pad_dims_split_rows_multicore.cpp
+    program_id: 87
+- kernel:
+    watcher_kernel_id: 111
+    name: fill_pad_writer
+    path: /home/hshah/.cache/tt-metal-cache/b0f096ed68/4096/kernels/fill_pad_writer/1073055793191844925/
+    source: ttnn/cpp/ttnn/operations/data_movement/fill_pad/device/kernels/dataflow/fill_pad_writer.cpp
+    program_id: 89
+- kernel:
+    watcher_kernel_id: 114
+    name: reduce_w
+    path: /home/hshah/.cache/tt-metal-cache/b0f096ed68/4096/kernels/reduce_w/9857570557770475357/
+    source: ttnn/cpp/ttnn/operations/reduction/generic/device/kernels/compute/reduce_w.cpp
+    program_id: 91
+- kernel:
+    watcher_kernel_id: 112
+    name: reader_unary_reduce_universal_start_id
+    path: /home/hshah/.cache/tt-metal-cache/b0f096ed68/4096/kernels/reader_unary_reduce_universal_start_id/6662838265979580063/
+    source: ttnn/cpp/ttnn/operations/reduction/generic/device/kernels/dataflow/reader_unary_reduce_universal_start_id.cpp
+    program_id: 91
+- kernel:
+    watcher_kernel_id: 113
+    name: writer_unary_universal_start_id
+    path: /home/hshah/.cache/tt-metal-cache/b0f096ed68/4096/kernels/writer_unary_universal_start_id/11263432783783311748/
+    source: ttnn/cpp/ttnn/operations/eltwise/unary/device/kernels/dataflow/writer_unary_universal_start_id.cpp
+    program_id: 91
+- kernel:
+    watcher_kernel_id: 115
+    name: reader_reshape_tiled
+    path: /home/hshah/.cache/tt-metal-cache/b0f096ed68/4096/kernels/reader_reshape_tiled/12964750237538406291/
+    source: ttnn/cpp/ttnn/operations/data_movement/reshape_view/device/device/dataflow/reader_reshape_tiled.cpp
+    program_id: 93
+- kernel:
+    watcher_kernel_id: 116
+    name: writer_reshape_tiled
+    path: /home/hshah/.cache/tt-metal-cache/b0f096ed68/4096/kernels/writer_reshape_tiled/13995203706131332447/
+    source: ttnn/cpp/ttnn/operations/data_movement/reshape_view/device/device/dataflow/writer_reshape_tiled.cpp
+    program_id: 93
+- kernel:
+    watcher_kernel_id: 117
+    name: reader_unary_interleaved_start_id
+    path: /home/hshah/.cache/tt-metal-cache/b0f096ed68/4096/kernels/reader_unary_interleaved_start_id/12320960948475709456/
+    source: ttnn/cpp/ttnn/operations/eltwise/unary/device/kernels/dataflow/reader_unary_interleaved_start_id.cpp
+    program_id: 95
+- kernel:
+    watcher_kernel_id: 118
+    name: writer_unary_stick_layout_split_rows_multicore
+    path: /home/hshah/.cache/tt-metal-cache/b0f096ed68/4096/kernels/writer_unary_stick_layout_split_rows_multicore/4866808386666313980/
+    source: ttnn/cpp/ttnn/operations/data_movement/untilize_with_unpadding/device/kernels/dataflow/writer_unary_stick_layout_split_rows_multicore.cpp
+    program_id: 95
+- kernel:
+    watcher_kernel_id: 119
+    name: pack_untilize
+    path: /home/hshah/.cache/tt-metal-cache/b0f096ed68/4096/kernels/pack_untilize/15568749969007824842/
+    source: ttnn/cpp/ttnn/operations/data_movement/untilize/device/kernels/compute/pack_untilize.cpp
+    program_id: 95
+- kernel:
+    watcher_kernel_id: 121
+    name: writer_unary_stick_layout_split_rows_multicore
+    path: /home/hshah/.cache/tt-metal-cache/b0f096ed68/4096/kernels/writer_unary_stick_layout_split_rows_multicore/10024165127393004823/
+    source: ttnn/cpp/ttnn/operations/data_movement/untilize_with_unpadding/device/kernels/dataflow/writer_unary_stick_layout_split_rows_multicore.cpp
+    program_id: 97
+- kernel:
+    watcher_kernel_id: 120
+    name: reader_unary_interleaved_start_id
+    path: /home/hshah/.cache/tt-metal-cache/b0f096ed68/4096/kernels/reader_unary_interleaved_start_id/12320960948475709456/
+    source: ttnn/cpp/ttnn/operations/eltwise/unary/device/kernels/dataflow/reader_unary_interleaved_start_id.cpp
+    program_id: 97
+- kernel:
+    watcher_kernel_id: 122
+    name: pack_untilize
+    path: /home/hshah/.cache/tt-metal-cache/b0f096ed68/4096/kernels/pack_untilize/638370247388372442/
+    source: ttnn/cpp/ttnn/operations/data_movement/untilize/device/kernels/compute/pack_untilize.cpp
+    program_id: 97
+- kernel:
+    watcher_kernel_id: 124
+    name: writer_reshape_tiled
+    path: /home/hshah/.cache/tt-metal-cache/b0f096ed68/4096/kernels/writer_reshape_tiled/5653824396150220751/
+    source: ttnn/cpp/ttnn/operations/data_movement/reshape_view/device/device/dataflow/writer_reshape_tiled.cpp
+    program_id: 99
+- kernel:
+    watcher_kernel_id: 123
+    name: reader_reshape_tiled
+    path: /home/hshah/.cache/tt-metal-cache/b0f096ed68/4096/kernels/reader_reshape_tiled/1017000955882447591/
+    source: ttnn/cpp/ttnn/operations/data_movement/reshape_view/device/device/dataflow/reader_reshape_tiled.cpp
+    program_id: 99
+- kernel:
+    watcher_kernel_id: 125
+    name: reader_reshape_tiled
+    path: /home/hshah/.cache/tt-metal-cache/b0f096ed68/4096/kernels/reader_reshape_tiled/4017386157641184494/
+    source: ttnn/cpp/ttnn/operations/data_movement/reshape_view/device/device/dataflow/reader_reshape_tiled.cpp
+    program_id: 101
+- kernel:
+    watcher_kernel_id: 126
+    name: writer_reshape_tiled
+    path: /home/hshah/.cache/tt-metal-cache/b0f096ed68/4096/kernels/writer_reshape_tiled/2266785545507055143/
+    source: ttnn/cpp/ttnn/operations/data_movement/reshape_view/device/device/dataflow/writer_reshape_tiled.cpp
+    program_id: 101
+- kernel:
+    watcher_kernel_id: 127
+    name: reader_unary_transpose_hc_interleaved_tiled_padding_aware
+    path: /home/hshah/.cache/tt-metal-cache/b0f096ed68/4096/kernels/reader_unary_transpose_hc_interleaved_tiled_padding_aware/859482809294490625/
+    source: ttnn/cpp/ttnn/operations/data_movement/transpose/device/kernels/dataflow/reader_unary_transpose_hc_interleaved_tiled_padding_aware.cpp
+    program_id: 103
+- kernel:
+    watcher_kernel_id: 129
+    name: writer_permute_interleaved_tiled_row_invariant
+    path: /home/hshah/.cache/tt-metal-cache/b0f096ed68/4096/kernels/writer_permute_interleaved_tiled_row_invariant/9493992991919683354/
+    source: ttnn/cpp/ttnn/operations/data_movement/permute/device/kernels/dataflow/writer_permute_interleaved_tiled_row_invariant.cpp
+    program_id: 103
+- kernel:
+    watcher_kernel_id: 128
+    name: transpose_wh
+    path: /home/hshah/.cache/tt-metal-cache/b0f096ed68/4096/kernels/transpose_wh/434790817815595409/
+    source: ttnn/cpp/ttnn/operations/data_movement/transpose/device/kernels/compute/transpose_wh.cpp
+    program_id: 103
+- kernel:
+    watcher_kernel_id: 130
+    name: reader_reshape_tiled
+    path: /home/hshah/.cache/tt-metal-cache/b0f096ed68/4096/kernels/reader_reshape_tiled/6464758623103524342/
+    source: ttnn/cpp/ttnn/operations/data_movement/reshape_view/device/device/dataflow/reader_reshape_tiled.cpp
+    program_id: 105
+- kernel:
+    watcher_kernel_id: 131
+    name: writer_reshape_tiled
+    path: /home/hshah/.cache/tt-metal-cache/b0f096ed68/4096/kernels/writer_reshape_tiled/10867115193092588364/
+    source: ttnn/cpp/ttnn/operations/data_movement/reshape_view/device/device/dataflow/writer_reshape_tiled.cpp
+    program_id: 105
+- kernel:
+    watcher_kernel_id: 132
+    name: reader_reshape_tiled
+    path: /home/hshah/.cache/tt-metal-cache/b0f096ed68/4096/kernels/reader_reshape_tiled/2280582019673287387/
+    source: ttnn/cpp/ttnn/operations/data_movement/reshape_view/device/device/dataflow/reader_reshape_tiled.cpp
+    program_id: 107
+- kernel:
+    watcher_kernel_id: 133
+    name: writer_reshape_tiled
+    path: /home/hshah/.cache/tt-metal-cache/b0f096ed68/4096/kernels/writer_reshape_tiled/3210834356898504738/
+    source: ttnn/cpp/ttnn/operations/data_movement/reshape_view/device/device/dataflow/writer_reshape_tiled.cpp
+    program_id: 107
+- kernel:
+    watcher_kernel_id: 135
+    name: transpose_xw_tiled
+    path: /home/hshah/.cache/tt-metal-cache/b0f096ed68/4096/kernels/transpose_xw_tiled/9102875414070527210/
+    source: ttnn/cpp/ttnn/operations/data_movement/permute/device/kernels/compute/transpose_xw_tiled.cpp
+    program_id: 109
+- kernel:
+    watcher_kernel_id: 134
+    name: reader_permute_interleaved_tiled_generic
+    path: /home/hshah/.cache/tt-metal-cache/b0f096ed68/4096/kernels/reader_permute_interleaved_tiled_generic/12319516360479400106/
+    source: ttnn/cpp/ttnn/operations/data_movement/permute/device/kernels/dataflow/reader_permute_interleaved_tiled_generic.cpp
+    program_id: 109
+- kernel:
+    watcher_kernel_id: 136
+    name: writer_permute_interleaved_tiled_generic
+    path: /home/hshah/.cache/tt-metal-cache/b0f096ed68/4096/kernels/writer_permute_interleaved_tiled_generic/2354400874531216476/
+    source: ttnn/cpp/ttnn/operations/data_movement/permute/device/kernels/dataflow/writer_permute_interleaved_tiled_generic.cpp
+    program_id: 109
+- kernel:
+    watcher_kernel_id: 137
+    name: writer_interleaved_no_bcast
+    path: /home/hshah/.cache/tt-metal-cache/b0f096ed68/4096/kernels/writer_interleaved_no_bcast/15087332936279405208/
+    source: ttnn/cpp/ttnn/operations/eltwise/binary_ng/device/kernels_ng/dataflow/writer_interleaved_no_bcast.cpp
+    program_id: 111
+- kernel:
+    watcher_kernel_id: 139
+    name: reader_interleaved_no_bcast
+    path: /home/hshah/.cache/tt-metal-cache/b0f096ed68/4096/kernels/reader_interleaved_no_bcast/15651625445338238906/
+    source: ttnn/cpp/ttnn/operations/eltwise/binary_ng/device/kernels_ng/dataflow/reader_interleaved_no_bcast.cpp
+    program_id: 111
+- kernel:
+    watcher_kernel_id: 138
+    name: eltwise_binary_sfpu_no_bcast
+    path: /home/hshah/.cache/tt-metal-cache/b0f096ed68/4096/kernels/eltwise_binary_sfpu_no_bcast/16809927033444324895/
+    source: ttnn/cpp/ttnn/operations/eltwise/binary_ng/device/kernels/compute/eltwise_binary_sfpu_no_bcast.cpp
+    program_id: 111
+- kernel:
+    watcher_kernel_id: 140
+    name: fill_pad_writer
+    path: /home/hshah/.cache/tt-metal-cache/b0f096ed68/4096/kernels/fill_pad_writer/7630434154729608081/
+    source: ttnn/cpp/ttnn/operations/data_movement/fill_pad/device/kernels/dataflow/fill_pad_writer.cpp
+    program_id: 113
+- kernel:
+    watcher_kernel_id: 142
+    name: writer_unary_universal_start_id
+    path: /home/hshah/.cache/tt-metal-cache/b0f096ed68/4096/kernels/writer_unary_universal_start_id/11263432783783311748/
+    source: ttnn/cpp/ttnn/operations/eltwise/unary/device/kernels/dataflow/writer_unary_universal_start_id.cpp
+    program_id: 115
+- kernel:
+    watcher_kernel_id: 141
+    name: reader_unary_reduce_universal_start_id
+    path: /home/hshah/.cache/tt-metal-cache/b0f096ed68/4096/kernels/reader_unary_reduce_universal_start_id/6662838265979580063/
+    source: ttnn/cpp/ttnn/operations/reduction/generic/device/kernels/dataflow/reader_unary_reduce_universal_start_id.cpp
+    program_id: 115
+- kernel:
+    watcher_kernel_id: 143
+    name: reduce_w
+    path: /home/hshah/.cache/tt-metal-cache/b0f096ed68/4096/kernels/reduce_w/14699984236120308395/
+    source: ttnn/cpp/ttnn/operations/reduction/generic/device/kernels/compute/reduce_w.cpp
+    program_id: 115
+- kernel:
+    watcher_kernel_id: 144
+    name: reader_reshape_tiled
+    path: /home/hshah/.cache/tt-metal-cache/b0f096ed68/4096/kernels/reader_reshape_tiled/10613843591347072222/
+    source: ttnn/cpp/ttnn/operations/data_movement/reshape_view/device/device/dataflow/reader_reshape_tiled.cpp
+    program_id: 117
+- kernel:
+    watcher_kernel_id: 145
+    name: writer_reshape_tiled
+    path: /home/hshah/.cache/tt-metal-cache/b0f096ed68/4096/kernels/writer_reshape_tiled/11985470250716347177/
+    source: ttnn/cpp/ttnn/operations/data_movement/reshape_view/device/device/dataflow/writer_reshape_tiled.cpp
+    program_id: 117
+- kernel:
+    watcher_kernel_id: 146
+    name: fill_pad_writer
+    path: /home/hshah/.cache/tt-metal-cache/b0f096ed68/4096/kernels/fill_pad_writer/8286738103209270943/
+    source: ttnn/cpp/ttnn/operations/data_movement/fill_pad/device/kernels/dataflow/fill_pad_writer.cpp
+    program_id: 119
+- kernel:
+    watcher_kernel_id: 148
+    name: writer_unary_universal_start_id
+    path: /home/hshah/.cache/tt-metal-cache/b0f096ed68/4096/kernels/writer_unary_universal_start_id/11263432783783311748/
+    source: ttnn/cpp/ttnn/operations/eltwise/unary/device/kernels/dataflow/writer_unary_universal_start_id.cpp
+    program_id: 121
+- kernel:
+    watcher_kernel_id: 149
+    name: reduce_w
+    path: /home/hshah/.cache/tt-metal-cache/b0f096ed68/4096/kernels/reduce_w/9857570557770475357/
+    source: ttnn/cpp/ttnn/operations/reduction/generic/device/kernels/compute/reduce_w.cpp
+    program_id: 121
+- kernel:
+    watcher_kernel_id: 147
+    name: reader_unary_reduce_universal_start_id
+    path: /home/hshah/.cache/tt-metal-cache/b0f096ed68/4096/kernels/reader_unary_reduce_universal_start_id/6662838265979580063/
+    source: ttnn/cpp/ttnn/operations/reduction/generic/device/kernels/dataflow/reader_unary_reduce_universal_start_id.cpp
+    program_id: 121
+- kernel:
+    watcher_kernel_id: 150
+    name: reader_reshape_tiled
+    path: /home/hshah/.cache/tt-metal-cache/b0f096ed68/4096/kernels/reader_reshape_tiled/6149033708397897965/
+    source: ttnn/cpp/ttnn/operations/data_movement/reshape_view/device/device/dataflow/reader_reshape_tiled.cpp
+    program_id: 123
+- kernel:
+    watcher_kernel_id: 151
+    name: writer_reshape_tiled
+    path: /home/hshah/.cache/tt-metal-cache/b0f096ed68/4096/kernels/writer_reshape_tiled/562661501277516035/
+    source: ttnn/cpp/ttnn/operations/data_movement/reshape_view/device/device/dataflow/writer_reshape_tiled.cpp
+    program_id: 123
+- kernel:
+    watcher_kernel_id: 152
+    name: reader_unary_interleaved_start_id
+    path: /home/hshah/.cache/tt-metal-cache/b0f096ed68/4096/kernels/reader_unary_interleaved_start_id/12320960948475709456/
+    source: ttnn/cpp/ttnn/operations/eltwise/unary/device/kernels/dataflow/reader_unary_interleaved_start_id.cpp
+    program_id: 125
+- kernel:
+    watcher_kernel_id: 153
+    name: writer_unary_stick_layout_split_rows_multicore
+    path: /home/hshah/.cache/tt-metal-cache/b0f096ed68/4096/kernels/writer_unary_stick_layout_split_rows_multicore/5793238990831468587/
+    source: ttnn/cpp/ttnn/operations/data_movement/untilize_with_unpadding/device/kernels/dataflow/writer_unary_stick_layout_split_rows_multicore.cpp
+    program_id: 125
+- kernel:
+    watcher_kernel_id: 154
+    name: untilize
+    path: /home/hshah/.cache/tt-metal-cache/b0f096ed68/4096/kernels/untilize/7308844104447722295/
+    source: ttnn/cpp/ttnn/operations/data_movement/untilize/device/kernels/compute/untilize.cpp
+    program_id: 125
+- kernel:
+    watcher_kernel_id: 155
+    name: reader_unary_start_id
+    path: /home/hshah/.cache/tt-metal-cache/b0f096ed68/4096/kernels/reader_unary_start_id/826408470232971661/
+    source: ttnn/cpp/ttnn/operations/data_movement/untilize/device/kernels/dataflow/reader_unary_start_id.cpp
+    program_id: 127
+- kernel:
+    watcher_kernel_id: 156
+    name: writer_unary_stick_layout_split_rows_multi_core
+    path: /home/hshah/.cache/tt-metal-cache/b0f096ed68/4096/kernels/writer_unary_stick_layout_split_rows_multi_core/335863672217182368/
+    source: ttnn/cpp/ttnn/operations/data_movement/untilize/device/kernels/dataflow/writer_unary_stick_layout_split_rows_multi_core.cpp
+    program_id: 127
+- kernel:
+    watcher_kernel_id: 157
+    name: pack_untilize_variable_num_blocks
+    path: /home/hshah/.cache/tt-metal-cache/b0f096ed68/4096/kernels/pack_untilize_variable_num_blocks/12198259127510920856/
+    source: ttnn/cpp/ttnn/operations/data_movement/untilize/device/kernels/compute/pack_untilize_variable_num_blocks.cpp
+    program_id: 127
+- kernel:
+    watcher_kernel_id: 160
+    name: reader_interleaved_no_bcast
+    path: /home/hshah/.cache/tt-metal-cache/b0f096ed68/4096/kernels/reader_interleaved_no_bcast/15651625445338238906/
+    source: ttnn/cpp/ttnn/operations/eltwise/binary_ng/device/kernels_ng/dataflow/reader_interleaved_no_bcast.cpp
+    program_id: 129
+- kernel:
+    watcher_kernel_id: 158
+    name: writer_interleaved_no_bcast
+    path: /home/hshah/.cache/tt-metal-cache/b0f096ed68/4096/kernels/writer_interleaved_no_bcast/15087332936279405208/
+    source: ttnn/cpp/ttnn/operations/eltwise/binary_ng/device/kernels_ng/dataflow/writer_interleaved_no_bcast.cpp
+    program_id: 129
+- kernel:
+    watcher_kernel_id: 159
+    name: eltwise_binary_sfpu_no_bcast
+    path: /home/hshah/.cache/tt-metal-cache/b0f096ed68/4096/kernels/eltwise_binary_sfpu_no_bcast/6631101743305254959/
+    source: ttnn/cpp/ttnn/operations/eltwise/binary_ng/device/kernels/compute/eltwise_binary_sfpu_no_bcast.cpp
+    program_id: 129
+- kernel:
+    watcher_kernel_id: 162
+    name: writer_reshape_tiled
+    path: /home/hshah/.cache/tt-metal-cache/b0f096ed68/4096/kernels/writer_reshape_tiled/5653824396150220751/
+    source: ttnn/cpp/ttnn/operations/data_movement/reshape_view/device/device/dataflow/writer_reshape_tiled.cpp
+    program_id: 131
+- kernel:
+    watcher_kernel_id: 161
+    name: reader_reshape_tiled
+    path: /home/hshah/.cache/tt-metal-cache/b0f096ed68/4096/kernels/reader_reshape_tiled/1017000955882447591/
+    source: ttnn/cpp/ttnn/operations/data_movement/reshape_view/device/device/dataflow/reader_reshape_tiled.cpp
+    program_id: 131
+- kernel:
+    watcher_kernel_id: 165
+    name: pack_untilize
+    path: /home/hshah/.cache/tt-metal-cache/b0f096ed68/4096/kernels/pack_untilize/638370247388372442/
+    source: ttnn/cpp/ttnn/operations/data_movement/untilize/device/kernels/compute/pack_untilize.cpp
+    program_id: 133
+- kernel:
+    watcher_kernel_id: 163
+    name: reader_unary_interleaved_start_id
+    path: /home/hshah/.cache/tt-metal-cache/b0f096ed68/4096/kernels/reader_unary_interleaved_start_id/12320960948475709456/
+    source: ttnn/cpp/ttnn/operations/eltwise/unary/device/kernels/dataflow/reader_unary_interleaved_start_id.cpp
+    program_id: 133
+- kernel:
+    watcher_kernel_id: 164
+    name: writer_unary_stick_layout_split_rows_multicore
+    path: /home/hshah/.cache/tt-metal-cache/b0f096ed68/4096/kernels/writer_unary_stick_layout_split_rows_multicore/12039683455403667181/
+    source: ttnn/cpp/ttnn/operations/data_movement/untilize_with_unpadding/device/kernels/dataflow/writer_unary_stick_layout_split_rows_multicore.cpp
+    program_id: 133
+- kernel:
+    watcher_kernel_id: 167
+    name: writer_reshape_tiled
+    path: /home/hshah/.cache/tt-metal-cache/b0f096ed68/4096/kernels/writer_reshape_tiled/3210834356898504738/
+    source: ttnn/cpp/ttnn/operations/data_movement/reshape_view/device/device/dataflow/writer_reshape_tiled.cpp
+    program_id: 135
+- kernel:
+    watcher_kernel_id: 166
+    name: reader_reshape_tiled
+    path: /home/hshah/.cache/tt-metal-cache/b0f096ed68/4096/kernels/reader_reshape_tiled/2280582019673287387/
+    source: ttnn/cpp/ttnn/operations/data_movement/reshape_view/device/device/dataflow/reader_reshape_tiled.cpp
+    program_id: 135
+- kernel:
+    watcher_kernel_id: 170
+    name: pack_untilize
+    path: /home/hshah/.cache/tt-metal-cache/b0f096ed68/4096/kernels/pack_untilize/638370247388372442/
+    source: ttnn/cpp/ttnn/operations/data_movement/untilize/device/kernels/compute/pack_untilize.cpp
+    program_id: 137
+- kernel:
+    watcher_kernel_id: 169
+    name: writer_unary_stick_layout_split_rows_multicore
+    path: /home/hshah/.cache/tt-metal-cache/b0f096ed68/4096/kernels/writer_unary_stick_layout_split_rows_multicore/12039683455403667181/
+    source: ttnn/cpp/ttnn/operations/data_movement/untilize_with_unpadding/device/kernels/dataflow/writer_unary_stick_layout_split_rows_multicore.cpp
+    program_id: 137
+- kernel:
+    watcher_kernel_id: 168
+    name: reader_unary_interleaved_start_id
+    path: /home/hshah/.cache/tt-metal-cache/b0f096ed68/4096/kernels/reader_unary_interleaved_start_id/12320960948475709456/
+    source: ttnn/cpp/ttnn/operations/eltwise/unary/device/kernels/dataflow/reader_unary_interleaved_start_id.cpp
+    program_id: 137
+- kernel:
+    watcher_kernel_id: 172
+    name: writer_reshape_tiled
+    path: /home/hshah/.cache/tt-metal-cache/b0f096ed68/4096/kernels/writer_reshape_tiled/3210834356898504738/
+    source: ttnn/cpp/ttnn/operations/data_movement/reshape_view/device/device/dataflow/writer_reshape_tiled.cpp
+    program_id: 139
+- kernel:
+    watcher_kernel_id: 171
+    name: reader_reshape_tiled
+    path: /home/hshah/.cache/tt-metal-cache/b0f096ed68/4096/kernels/reader_reshape_tiled/2280582019673287387/
+    source: ttnn/cpp/ttnn/operations/data_movement/reshape_view/device/device/dataflow/reader_reshape_tiled.cpp
+    program_id: 139
+- kernel:
+    watcher_kernel_id: 175
+    name: pack_untilize
+    path: /home/hshah/.cache/tt-metal-cache/b0f096ed68/4096/kernels/pack_untilize/638370247388372442/
+    source: ttnn/cpp/ttnn/operations/data_movement/untilize/device/kernels/compute/pack_untilize.cpp
+    program_id: 141
+- kernel:
+    watcher_kernel_id: 174
+    name: writer_unary_stick_layout_split_rows_multicore
+    path: /home/hshah/.cache/tt-metal-cache/b0f096ed68/4096/kernels/writer_unary_stick_layout_split_rows_multicore/12039683455403667181/
+    source: ttnn/cpp/ttnn/operations/data_movement/untilize_with_unpadding/device/kernels/dataflow/writer_unary_stick_layout_split_rows_multicore.cpp
+    program_id: 141
+- kernel:
+    watcher_kernel_id: 173
+    name: reader_unary_interleaved_start_id
+    path: /home/hshah/.cache/tt-metal-cache/b0f096ed68/4096/kernels/reader_unary_interleaved_start_id/12320960948475709456/
+    source: ttnn/cpp/ttnn/operations/eltwise/unary/device/kernels/dataflow/reader_unary_interleaved_start_id.cpp
+    program_id: 141
+- kernel:
+    watcher_kernel_id: 177
+    name: writer_reshape_tiled
+    path: /home/hshah/.cache/tt-metal-cache/b0f096ed68/4096/kernels/writer_reshape_tiled/3210834356898504738/
+    source: ttnn/cpp/ttnn/operations/data_movement/reshape_view/device/device/dataflow/writer_reshape_tiled.cpp
+    program_id: 143
+- kernel:
+    watcher_kernel_id: 176
+    name: reader_reshape_tiled
+    path: /home/hshah/.cache/tt-metal-cache/b0f096ed68/4096/kernels/reader_reshape_tiled/2280582019673287387/
+    source: ttnn/cpp/ttnn/operations/data_movement/reshape_view/device/device/dataflow/reader_reshape_tiled.cpp
+    program_id: 143
+- kernel:
+    watcher_kernel_id: 178
+    name: reader_unary_interleaved_wh_multicore
+    path: /home/hshah/.cache/tt-metal-cache/b0f096ed68/4096/kernels/reader_unary_interleaved_wh_multicore/8591644794738710894/
+    source: ttnn/cpp/ttnn/operations/eltwise/unary/device/kernels/dataflow/reader_unary_interleaved_wh_multicore.cpp
+    program_id: 146
+- kernel:
+    watcher_kernel_id: 179
+    name: writer_unary_stick_layout_wh_multicore
+    path: /home/hshah/.cache/tt-metal-cache/b0f096ed68/4096/kernels/writer_unary_stick_layout_wh_multicore/13002745582907228270/
+    source: ttnn/cpp/ttnn/operations/data_movement/untilize_with_unpadding/device/kernels/dataflow/writer_unary_stick_layout_wh_multicore.cpp
+    program_id: 146
+- kernel:
+    watcher_kernel_id: 180
+    name: untilize_wh
+    path: /home/hshah/.cache/tt-metal-cache/b0f096ed68/4096/kernels/untilize_wh/2744053485362382067/
+    source: ttnn/cpp/ttnn/operations/data_movement/untilize/device/kernels/compute/untilize_wh.cpp
+    program_id: 146
+- kernel:
+    watcher_kernel_id: 182
+    name: untilize_wh
+    path: /home/hshah/.cache/tt-metal-cache/b0f096ed68/4096/kernels/untilize_wh/4419727671899657257/
+    source: ttnn/cpp/ttnn/operations/data_movement/untilize/device/kernels/compute/untilize_wh.cpp
+    program_id: 146
+- kernel:
+    watcher_kernel_id: 181
+    name: untilize_wh
+    path: /home/hshah/.cache/tt-metal-cache/b0f096ed68/4096/kernels/untilize_wh/15010988223839784438/
+    source: ttnn/cpp/ttnn/operations/data_movement/untilize/device/kernels/compute/untilize_wh.cpp
+    program_id: 146
+- kernel:
+    watcher_kernel_id: 185
+    name: pack_untilize
+    path: /home/hshah/.cache/tt-metal-cache/b0f096ed68/4096/kernels/pack_untilize/638370247388372442/
+    source: ttnn/cpp/ttnn/operations/data_movement/untilize/device/kernels/compute/pack_untilize.cpp
+    program_id: 148
+- kernel:
+    watcher_kernel_id: 184
+    name: writer_unary_stick_layout_split_rows_multicore
+    path: /home/hshah/.cache/tt-metal-cache/b0f096ed68/4096/kernels/writer_unary_stick_layout_split_rows_multicore/12039683455403667181/
+    source: ttnn/cpp/ttnn/operations/data_movement/untilize_with_unpadding/device/kernels/dataflow/writer_unary_stick_layout_split_rows_multicore.cpp
+    program_id: 148
+- kernel:
+    watcher_kernel_id: 183
+    name: reader_unary_interleaved_start_id
+    path: /home/hshah/.cache/tt-metal-cache/b0f096ed68/4096/kernels/reader_unary_interleaved_start_id/12320960948475709456/
+    source: ttnn/cpp/ttnn/operations/eltwise/unary/device/kernels/dataflow/reader_unary_interleaved_start_id.cpp
+    program_id: 148
+- kernel:
+    watcher_kernel_id: 187
+    name: writer_reshape_tiled
+    path: /home/hshah/.cache/tt-metal-cache/b0f096ed68/4096/kernels/writer_reshape_tiled/2266785545507055143/
+    source: ttnn/cpp/ttnn/operations/data_movement/reshape_view/device/device/dataflow/writer_reshape_tiled.cpp
+    program_id: 150
+- kernel:
+    watcher_kernel_id: 186
+    name: reader_reshape_tiled
+    path: /home/hshah/.cache/tt-metal-cache/b0f096ed68/4096/kernels/reader_reshape_tiled/4017386157641184494/
+    source: ttnn/cpp/ttnn/operations/data_movement/reshape_view/device/device/dataflow/reader_reshape_tiled.cpp
+    program_id: 150
+- kernel:
+    watcher_kernel_id: 188
+    name: reader_unary_interleaved_start_id
+    path: /home/hshah/.cache/tt-metal-cache/b0f096ed68/4096/kernels/reader_unary_interleaved_start_id/12320960948475709456/
+    source: ttnn/cpp/ttnn/operations/eltwise/unary/device/kernels/dataflow/reader_unary_interleaved_start_id.cpp
+    program_id: 152
+- kernel:
+    watcher_kernel_id: 190
+    name: pack_untilize
+    path: /home/hshah/.cache/tt-metal-cache/b0f096ed68/4096/kernels/pack_untilize/638370247388372442/
+    source: ttnn/cpp/ttnn/operations/data_movement/untilize/device/kernels/compute/pack_untilize.cpp
+    program_id: 152
+- kernel:
+    watcher_kernel_id: 189
+    name: writer_unary_stick_layout_split_rows_multicore
+    path: /home/hshah/.cache/tt-metal-cache/b0f096ed68/4096/kernels/writer_unary_stick_layout_split_rows_multicore/16881417810550666142/
+    source: ttnn/cpp/ttnn/operations/data_movement/untilize_with_unpadding/device/kernels/dataflow/writer_unary_stick_layout_split_rows_multicore.cpp
+    program_id: 152
+- kernel:
+    watcher_kernel_id: 193
+    name: pack_untilize
+    path: /home/hshah/.cache/tt-metal-cache/b0f096ed68/4096/kernels/pack_untilize/638370247388372442/
+    source: ttnn/cpp/ttnn/operations/data_movement/untilize/device/kernels/compute/pack_untilize.cpp
+    program_id: 154
+- kernel:
+    watcher_kernel_id: 192
+    name: writer_unary_stick_layout_split_rows_multicore
+    path: /home/hshah/.cache/tt-metal-cache/b0f096ed68/4096/kernels/writer_unary_stick_layout_split_rows_multicore/216682018418486606/
+    source: ttnn/cpp/ttnn/operations/data_movement/untilize_with_unpadding/device/kernels/dataflow/writer_unary_stick_layout_split_rows_multicore.cpp
+    program_id: 154
+- kernel:
+    watcher_kernel_id: 191
+    name: reader_unary_interleaved_start_id
+    path: /home/hshah/.cache/tt-metal-cache/b0f096ed68/4096/kernels/reader_unary_interleaved_start_id/12320960948475709456/
+    source: ttnn/cpp/ttnn/operations/eltwise/unary/device/kernels/dataflow/reader_unary_interleaved_start_id.cpp
+    program_id: 154
+- kernel:
+    watcher_kernel_id: 195
+    name: writer_reshape_tiled
+    path: /home/hshah/.cache/tt-metal-cache/b0f096ed68/4096/kernels/writer_reshape_tiled/5653824396150220751/
+    source: ttnn/cpp/ttnn/operations/data_movement/reshape_view/device/device/dataflow/writer_reshape_tiled.cpp
+    program_id: 156
+- kernel:
+    watcher_kernel_id: 194
+    name: reader_reshape_tiled
+    path: /home/hshah/.cache/tt-metal-cache/b0f096ed68/4096/kernels/reader_reshape_tiled/1017000955882447591/
+    source: ttnn/cpp/ttnn/operations/data_movement/reshape_view/device/device/dataflow/reader_reshape_tiled.cpp
+    program_id: 156
+- kernel:
+    watcher_kernel_id: 198
+    name: pack_untilize
+    path: /home/hshah/.cache/tt-metal-cache/b0f096ed68/4096/kernels/pack_untilize/638370247388372442/
+    source: ttnn/cpp/ttnn/operations/data_movement/untilize/device/kernels/compute/pack_untilize.cpp
+    program_id: 158
+- kernel:
+    watcher_kernel_id: 196
+    name: reader_unary_interleaved_start_id
+    path: /home/hshah/.cache/tt-metal-cache/b0f096ed68/4096/kernels/reader_unary_interleaved_start_id/12320960948475709456/
+    source: ttnn/cpp/ttnn/operations/eltwise/unary/device/kernels/dataflow/reader_unary_interleaved_start_id.cpp
+    program_id: 158
+- kernel:
+    watcher_kernel_id: 197
+    name: writer_unary_stick_layout_split_rows_multicore
+    path: /home/hshah/.cache/tt-metal-cache/b0f096ed68/4096/kernels/writer_unary_stick_layout_split_rows_multicore/9309620059179897349/
+    source: ttnn/cpp/ttnn/operations/data_movement/untilize_with_unpadding/device/kernels/dataflow/writer_unary_stick_layout_split_rows_multicore.cpp
+    program_id: 158
+- kernel:
+    watcher_kernel_id: 201
+    name: pack_untilize
+    path: /home/hshah/.cache/tt-metal-cache/b0f096ed68/4096/kernels/pack_untilize/638370247388372442/
+    source: ttnn/cpp/ttnn/operations/data_movement/untilize/device/kernels/compute/pack_untilize.cpp
+    program_id: 160
+- kernel:
+    watcher_kernel_id: 200
+    name: writer_unary_stick_layout_split_rows_multicore
+    path: /home/hshah/.cache/tt-metal-cache/b0f096ed68/4096/kernels/writer_unary_stick_layout_split_rows_multicore/12039683455403667181/
+    source: ttnn/cpp/ttnn/operations/data_movement/untilize_with_unpadding/device/kernels/dataflow/writer_unary_stick_layout_split_rows_multicore.cpp
+    program_id: 160
+- kernel:
+    watcher_kernel_id: 199
+    name: reader_unary_interleaved_start_id
+    path: /home/hshah/.cache/tt-metal-cache/b0f096ed68/4096/kernels/reader_unary_interleaved_start_id/12320960948475709456/
+    source: ttnn/cpp/ttnn/operations/eltwise/unary/device/kernels/dataflow/reader_unary_interleaved_start_id.cpp
+    program_id: 160
+- kernel:
+    watcher_kernel_id: 203
+    name: writer_reshape_tiled
+    path: /home/hshah/.cache/tt-metal-cache/b0f096ed68/4096/kernels/writer_reshape_tiled/15725283267736302931/
+    source: ttnn/cpp/ttnn/operations/data_movement/reshape_view/device/device/dataflow/writer_reshape_tiled.cpp
+    program_id: 162
+- kernel:
+    watcher_kernel_id: 202
+    name: reader_reshape_tiled
+    path: /home/hshah/.cache/tt-metal-cache/b0f096ed68/4096/kernels/reader_reshape_tiled/18010556271883885938/
+    source: ttnn/cpp/ttnn/operations/data_movement/reshape_view/device/device/dataflow/reader_reshape_tiled.cpp
+    program_id: 162
+- kernel:
+    watcher_kernel_id: 206
+    name: pack_untilize
+    path: /home/hshah/.cache/tt-metal-cache/b0f096ed68/4096/kernels/pack_untilize/638370247388372442/
+    source: ttnn/cpp/ttnn/operations/data_movement/untilize/device/kernels/compute/pack_untilize.cpp
+    program_id: 164
+- kernel:
+    watcher_kernel_id: 204
+    name: reader_unary_interleaved_start_id
+    path: /home/hshah/.cache/tt-metal-cache/b0f096ed68/4096/kernels/reader_unary_interleaved_start_id/12320960948475709456/
+    source: ttnn/cpp/ttnn/operations/eltwise/unary/device/kernels/dataflow/reader_unary_interleaved_start_id.cpp
+    program_id: 164
+- kernel:
+    watcher_kernel_id: 205
+    name: writer_unary_stick_layout_split_rows_multicore
+    path: /home/hshah/.cache/tt-metal-cache/b0f096ed68/4096/kernels/writer_unary_stick_layout_split_rows_multicore/1482949037059055633/
+    source: ttnn/cpp/ttnn/operations/data_movement/untilize_with_unpadding/device/kernels/dataflow/writer_unary_stick_layout_split_rows_multicore.cpp
+    program_id: 164
+- kernel:
+    watcher_kernel_id: 209
+    name: pack_untilize
+    path: /home/hshah/.cache/tt-metal-cache/b0f096ed68/4096/kernels/pack_untilize/638370247388372442/
+    source: ttnn/cpp/ttnn/operations/data_movement/untilize/device/kernels/compute/pack_untilize.cpp
+    program_id: 166
+- kernel:
+    watcher_kernel_id: 207
+    name: reader_unary_interleaved_start_id
+    path: /home/hshah/.cache/tt-metal-cache/b0f096ed68/4096/kernels/reader_unary_interleaved_start_id/12320960948475709456/
+    source: ttnn/cpp/ttnn/operations/eltwise/unary/device/kernels/dataflow/reader_unary_interleaved_start_id.cpp
+    program_id: 166
+- kernel:
+    watcher_kernel_id: 208
+    name: writer_unary_stick_layout_split_rows_multicore
+    path: /home/hshah/.cache/tt-metal-cache/b0f096ed68/4096/kernels/writer_unary_stick_layout_split_rows_multicore/10588623539015070165/
+    source: ttnn/cpp/ttnn/operations/data_movement/untilize_with_unpadding/device/kernels/dataflow/writer_unary_stick_layout_split_rows_multicore.cpp
+    program_id: 166
+- kernel:
+    watcher_kernel_id: 212
+    name: pack_untilize
+    path: /home/hshah/.cache/tt-metal-cache/b0f096ed68/4096/kernels/pack_untilize/638370247388372442/
+    source: ttnn/cpp/ttnn/operations/data_movement/untilize/device/kernels/compute/pack_untilize.cpp
+    program_id: 168
+- kernel:
+    watcher_kernel_id: 210
+    name: reader_unary_interleaved_start_id
+    path: /home/hshah/.cache/tt-metal-cache/b0f096ed68/4096/kernels/reader_unary_interleaved_start_id/12320960948475709456/
+    source: ttnn/cpp/ttnn/operations/eltwise/unary/device/kernels/dataflow/reader_unary_interleaved_start_id.cpp
+    program_id: 168
+- kernel:
+    watcher_kernel_id: 211
+    name: writer_unary_stick_layout_split_rows_multicore
+    path: /home/hshah/.cache/tt-metal-cache/b0f096ed68/4096/kernels/writer_unary_stick_layout_split_rows_multicore/13031356728582759571/
+    source: ttnn/cpp/ttnn/operations/data_movement/untilize_with_unpadding/device/kernels/dataflow/writer_unary_stick_layout_split_rows_multicore.cpp
+    program_id: 168
+- kernel:
+    watcher_kernel_id: 215
+    name: pack_untilize
+    path: /home/hshah/.cache/tt-metal-cache/b0f096ed68/4096/kernels/pack_untilize/638370247388372442/
+    source: ttnn/cpp/ttnn/operations/data_movement/untilize/device/kernels/compute/pack_untilize.cpp
+    program_id: 170
+- kernel:
+    watcher_kernel_id: 214
+    name: writer_unary_stick_layout_split_rows_multicore
+    path: /home/hshah/.cache/tt-metal-cache/b0f096ed68/4096/kernels/writer_unary_stick_layout_split_rows_multicore/13031356728582759571/
+    source: ttnn/cpp/ttnn/operations/data_movement/untilize_with_unpadding/device/kernels/dataflow/writer_unary_stick_layout_split_rows_multicore.cpp
+    program_id: 170
+- kernel:
+    watcher_kernel_id: 213
+    name: reader_unary_interleaved_start_id
+    path: /home/hshah/.cache/tt-metal-cache/b0f096ed68/4096/kernels/reader_unary_interleaved_start_id/12320960948475709456/
+    source: ttnn/cpp/ttnn/operations/eltwise/unary/device/kernels/dataflow/reader_unary_interleaved_start_id.cpp
+    program_id: 170
