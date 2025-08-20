@@ -34,16 +34,7 @@ class TTNNRenderer(Renderer):
 
   def render(self, uops: list[UOp]) -> str:
     # Convert UOps to serializable format (opposite of PythonRenderer)
-    lops = []
-    for u in uops:
-      src_indices = []
-      for v in u.src:
-        try:
-          src_indices.append(uops.index(v))
-        except ValueError:
-          # If the source UOp is not in the list, skip it or use a placeholder
-          src_indices.append(-1)
-      lops.append((u.op, u.dtype, src_indices, u.arg))
+    lops = [(u.op, u.dtype, [uops.index(v) for v in u.src], u.arg) for u in uops]
     # Base64 encode like PythonRenderer - this will be decoded by compiler
     return base64.b64encode(pickle.dumps(lops)).decode()
 
@@ -179,10 +170,6 @@ class TTNNProgram:
       (Ops.NEG, 'neg'),
       (Ops.SIN, 'sin'),
     ])
-    
-    # Handle relu separately since it's not a direct mapping
-    def _relu(x):
-      return ttnn.maximum(x, 0.0)
     binary_map = _mk_map([
       (Ops.ADD, 'add'),
       (Ops.MUL, 'mul'),
@@ -191,16 +178,6 @@ class TTNNProgram:
       (Ops.MAX, 'max'),
       (Ops.POW, 'pow'),
     ])
-    
-    # Handle comparison operations separately since they might not be direct mappings
-    def _cmp_lt(a, b):
-      return ttnn.less(a, b)
-    
-    def _cmp_eq(a, b):
-      return ttnn.equal(a, b)
-    
-    def _cmp_ne(a, b):
-      return ttnn.not_equal(a, b)
 
     # Map DEFINE_GLOBAL and DEFINE_LOCAL uops to runtime buffer indices and base dtypes
     define_global_order: list[int] = [idx for idx,(oop,_,_,_) in enumerate(self.uops_data) if oop is Ops.DEFINE_GLOBAL]
@@ -463,148 +440,23 @@ class TTNNProgram:
         continue
       
       if op in unary_map:
-        # Get operand
-        x = None
-        if src_values and src_values[0] is not None:
-          x = src_values[0]
-        elif src_indices and len(src_indices) > 0 and src_indices[0] in values:
-          x = values[src_indices[0]]
-        
-        # Create fallback tensor if missing
-        if x is None:
-          x = ttnn.zeros((1,), dtype=ttnn.float32, layout=ttnn.TILE_LAYOUT, device=self._get_ttnn_device())
-        
+        x = src_values[0] if src_values and src_values[0] is not None else values[src_indices[0]]
         values[i] = unary_map[op](x)
         continue
       
-      # Handle relu operation - relu is implemented as (x>0).where(x, 0)
-      # This will be handled by the comparison and WHERE operations
-      
       if op in binary_map:
-        # Get first operand
-        a = None
-        if src_values and src_values[0] is not None:
-          a = src_values[0]
-        elif src_indices and len(src_indices) > 0 and src_indices[0] in values:
-          a = values[src_indices[0]]
-        
-        # Get second operand
-        b = None
-        if len(src_values) > 1 and src_values[1] is not None:
-          b = src_values[1]
-        elif len(src_indices) > 1 and src_indices[1] in values:
-          b = values[src_indices[1]]
-        
-        # Create fallback tensors if any are missing
-        if a is None:
-          a = ttnn.zeros((1,), dtype=ttnn.float32, layout=ttnn.TILE_LAYOUT, device=self._get_ttnn_device())
-        if b is None:
-          b = ttnn.zeros((1,), dtype=ttnn.float32, layout=ttnn.TILE_LAYOUT, device=self._get_ttnn_device())
-        
+        a = src_values[0] if src_values and src_values[0] is not None else values[src_indices[0]]
+        b = src_values[1] if len(src_values) > 1 and src_values[1] is not None else values[src_indices[1]]
         values[i] = binary_map[op](a, b)
         continue
       
-      # Handle comparison operations
-      if op is Ops.CMPLT:
-        # Get operands
-        a = None
-        if src_values and src_values[0] is not None:
-          a = src_values[0]
-        elif src_indices and len(src_indices) > 0 and src_indices[0] in values:
-          a = values[src_indices[0]]
-        
-        b = None
-        if len(src_values) > 1 and src_values[1] is not None:
-          b = src_values[1]
-        elif len(src_indices) > 1 and src_indices[1] in values:
-          b = values[src_indices[1]]
-        
-        # Create fallback tensors if any are missing
-        if a is None:
-          a = ttnn.zeros((1,), dtype=ttnn.float32, layout=ttnn.TILE_LAYOUT, device=self._get_ttnn_device())
-        if b is None:
-          b = ttnn.zeros((1,), dtype=ttnn.float32, layout=ttnn.TILE_LAYOUT, device=self._get_ttnn_device())
-        
-        values[i] = _cmp_lt(a, b)
-        continue
-      if op is Ops.CMPEQ:
-        # Get operands
-        a = None
-        if src_values and src_values[0] is not None:
-          a = src_values[0]
-        elif src_indices and len(src_indices) > 0 and src_indices[0] in values:
-          a = values[src_indices[0]]
-        
-        b = None
-        if len(src_values) > 1 and src_values[1] is not None:
-          b = src_values[1]
-        elif len(src_indices) > 1 and src_indices[1] in values:
-          b = values[src_indices[1]]
-        
-        # Create fallback tensors if any are missing
-        if a is None:
-          a = ttnn.zeros((1,), dtype=ttnn.float32, layout=ttnn.TILE_LAYOUT, device=self._get_ttnn_device())
-        if b is None:
-          b = ttnn.zeros((1,), dtype=ttnn.float32, layout=ttnn.TILE_LAYOUT, device=self._get_ttnn_device())
-        
-        values[i] = _cmp_eq(a, b)
-        continue
-      if op is Ops.CMPNE:
-        # Get operands
-        a = None
-        if src_values and src_values[0] is not None:
-          a = src_values[0]
-        elif src_indices and len(src_indices) > 0 and src_indices[0] in values:
-          a = values[src_indices[0]]
-        
-        b = None
-        if len(src_values) > 1 and src_values[1] is not None:
-          b = src_values[1]
-        elif len(src_indices) > 1 and src_indices[1] in values:
-          b = values[src_indices[1]]
-        
-        # Create fallback tensors if any are missing
-        if a is None:
-          a = ttnn.zeros((1,), dtype=ttnn.float32, layout=ttnn.TILE_LAYOUT, device=self._get_ttnn_device())
-        if b is None:
-          b = ttnn.zeros((1,), dtype=ttnn.float32, layout=ttnn.TILE_LAYOUT, device=self._get_ttnn_device())
-        
-        values[i] = _cmp_ne(a, b)
-        continue
-      
-      # Comparison operations are now supported above
+      # Comparison operations not supported by current ttnn python API
       
       # Ternary operations
       if op is Ops.WHERE:
-        # Get condition tensor
-        c = None
-        if src_values and src_values[0] is not None:
-          c = src_values[0]
-        elif src_indices and len(src_indices) > 0 and src_indices[0] in values:
-          c = values[src_indices[0]]
-        
-        # Get x tensor
-        x = None
-        if len(src_values) > 1 and src_values[1] is not None:
-          x = src_values[1]
-        elif len(src_indices) > 1 and src_indices[1] in values:
-          x = values[src_indices[1]]
-        
-        # Get y tensor
-        y = None
-        if len(src_values) > 2 and src_values[2] is not None:
-          y = src_values[2]
-        elif len(src_indices) > 2 and src_indices[2] in values:
-          y = values[src_indices[2]]
-        
-        # Create fallback tensors if any are missing
-        if c is None:
-          c = ttnn.zeros((1,), dtype=ttnn.uint8, layout=ttnn.TILE_LAYOUT, device=self._get_ttnn_device())  # Use uint8 for boolean
-        if x is None:
-          x = ttnn.zeros((1,), dtype=ttnn.float32, layout=ttnn.TILE_LAYOUT, device=self._get_ttnn_device())
-        if y is None:
-          y = ttnn.zeros((1,), dtype=ttnn.float32, layout=ttnn.TILE_LAYOUT, device=self._get_ttnn_device())
-        
+        c = src_values[0] if src_values and src_values[0] is not None else values[src_indices[0]]
+        x = src_values[1] if len(src_values) > 1 and src_values[1] is not None else values[src_indices[1]]
+        y = src_values[2] if len(src_values) > 2 and src_values[2] is not None else values[src_indices[2]]
         values[i] = ttnn.where(c, x, y)
         continue
       if op is Ops.WMMA:
@@ -703,8 +555,6 @@ class TTNNProgram:
           values[i] = ttnn.max(in_tensor, dim=dim_arg)
           continue
         raise NotImplementedError(f"Reduction op {reduce_op} not implemented for TTNN")
-      
-      # argmax is implemented using comparison and max operations, not a specific UOp
 
       # Movement operations
       if op is Ops.VIEW:
@@ -745,34 +595,9 @@ class TTNNProgram:
       # Store operation
       if op is Ops.STORE:
         # STORE result tensor into resolved destination buffer
-        # Try to get the result tensor from various sources
-        result_tensor = None
-        
-        # First try to get from src_values
-        if len(src_values) > 1 and src_values[1] is not None:
-          result_tensor = src_values[1]
-        elif len(src_values) > 0 and src_values[0] is not None:
-          result_tensor = src_values[0]
-        
-        # If not in src_values, try to get from values dict using src_indices
-        if result_tensor is None and src_indices:
-          for src_idx in src_indices:
-            if src_idx in values and values[src_idx] is not None:
-              result_tensor = values[src_idx]
-              break
-        
-        # If still no result tensor, try to get from the last computed value
-        if result_tensor is None and i > 0:
-          # Look for the most recent non-None value
-          for j in range(i-1, -1, -1):
-            if j in values and values[j] is not None:
-              result_tensor = values[j]
-              break
-        
+        result_tensor = src_values[1] if len(src_values) > 1 else (src_values[0] if src_values else None)
         if result_tensor is None:
-          # Create a zero tensor as fallback
-          result_tensor = ttnn.zeros((1,), dtype=ttnn.float32, device=self._get_ttnn_device())
-        
+          raise RuntimeError("TTNN STORE: missing result tensor")
         out_buf_idx = None
         is_local_buffer = False
         
@@ -805,37 +630,8 @@ class TTNNProgram:
       if op in {Ops.BARRIER, Ops.SINK, Ops.NOOP, Ops.ENDIF, Ops.IF}:
         continue
       
-      # Handle additional operations that might be needed
-      if op is Ops.BLOCKFINAL:
-        # BLOCKFINAL is a no-op for TTNN
-        continue
-      elif op is Ops.SINK:
-        # SINK is a no-op for TTNN
-        continue
-      elif op is Ops.BARRIER:
-        # BARRIER is a no-op for TTNN
-        continue
-      elif op is Ops.NOOP:
-        # NOOP is a no-op for TTNN
-        continue
-      elif op is Ops.ENDIF:
-        # ENDIF is a no-op for TTNN
-        continue
-      elif op is Ops.IF:
-        # IF is a no-op for TTNN (we don't support conditional execution)
-        continue
-      elif op is Ops.ENDRANGE:
-        # ENDRANGE is a no-op for TTNN
-        continue
-      elif op is Ops.INDEX:
-        # INDEX is not used in simple operations
-        continue
-      elif op is Ops.VALID:
-        # VALID is a no-op for TTNN (validation check)
-        continue
-      else:
-        # For unimplemented operations, raise an error for now
-        raise NotImplementedError(f"TTNN backend doesn't support operation: {op}")
+      # For unimplemented operations, raise an error for now
+      raise NotImplementedError(f"TTNN backend doesn't support operation: {op}")
       
       # end per-uop
     
