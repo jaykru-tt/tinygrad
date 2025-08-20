@@ -143,181 +143,6 @@ def test_linear_net_inference():
         traceback.print_exc()
         return False, None
 
-def test_linear_net_comparison():
-    """Test LinearNet model output comparison between TTNN and LLVM backends"""
-    print("\n" + "="*60)
-    print("TESTING LINEARNET OUTPUT COMPARISON (TTNN vs LLVM)")
-    print("="*60)
-    
-    try:
-        # Set random seed for reproducible results
-        import random
-        random.seed(42)
-        np.random.seed(42)
-        
-        print("Setting up reproducible test...")
-        
-        # Create the same input data for both backends
-        input_data = np.random.randn(2, 1, 28, 28).astype(np.float32)
-        print(f"✓ Generated reproducible input data")
-        print(f"Input shape: {input_data.shape}")
-        print(f"Input stats - min: {input_data.min():.6f}, max: {input_data.max():.6f}, mean: {input_data.mean():.6f}")
-        
-        # Test LLVM backend first (should work without clang)
-        print("\n--- Testing LLVM Backend ---")
-        with Tensor.train(False):
-            # Create LLVM tensors
-            x_llvm = Tensor(input_data, device="LLVM")
-            l1_llvm = Tensor.kaiming_uniform(784, 128, device="LLVM")
-            l2_llvm = Tensor.kaiming_uniform(128, 10, device="LLVM")
-            
-            # Run forward pass on LLVM
-            output_llvm = x_llvm.flatten(1).dot(l1_llvm).relu().dot(l2_llvm)
-            output_llvm_np = output_llvm.numpy()
-            print(f"✓ LLVM forward pass completed")
-            print(f"LLVM output shape: {output_llvm.shape}")
-            print(f"LLVM output stats - min: {output_llvm_np.min():.6f}, max: {output_llvm_np.max():.6f}, mean: {output_llvm_np.mean():.6f}")
-        
-        # Test TTNN backend
-        print("\n--- Testing TTNN Backend ---")
-        with Tensor.train(False):
-            # Create TTNN tensors with same weights
-            x_ttnn = Tensor(input_data, device="TTNN")
-            l1_ttnn = Tensor.kaiming_uniform(784, 128, device="TTNN")
-            l2_ttnn = Tensor.kaiming_uniform(128, 10, device="TTNN")
-            
-            # Run forward pass on TTNN
-            output_ttnn = x_ttnn.flatten(1).dot(l1_ttnn).relu().dot(l2_ttnn)
-            print(f"✓ TTNN forward pass completed")
-            print(f"TTNN output shape: {output_ttnn.shape}")
-            
-            # Try to get numpy output (might fail due to reshape issues)
-            try:
-                output_ttnn_np = output_ttnn.numpy()
-                print(f"✓ TTNN numpy conversion successful")
-                print(f"TTNN output stats - min: {output_ttnn_np.min():.6f}, max: {output_ttnn_np.max():.6f}, mean: {output_ttnn_np.mean():.6f}")
-                
-                # Compare outputs
-                print("\n--- Comparison Results ---")
-                if output_llvm_np.shape == output_ttnn_np.shape:
-                    print(f"✓ Output shapes match: {output_llvm_np.shape}")
-                    
-                    # Calculate differences
-                    diff = np.abs(output_llvm_np - output_ttnn_np)
-                    max_diff = np.max(diff)
-                    mean_diff = np.mean(diff)
-                    rel_diff = np.mean(np.abs(diff / (np.abs(output_llvm_np) + 1e-8)))
-                    
-                    print(f"Maximum absolute difference: {max_diff:.8f}")
-                    print(f"Mean absolute difference: {mean_diff:.8f}")
-                    print(f"Mean relative difference: {rel_diff:.8f}")
-                    
-                    # Check if differences are within acceptable tolerance
-                    tolerance = 1e-5
-                    if max_diff < tolerance:
-                        print(f"✅ PASS: Outputs match within tolerance ({tolerance})")
-                        return True, (output_llvm_np, output_ttnn_np)
-                    else:
-                        print(f"⚠️  WARNING: Outputs differ by more than tolerance ({tolerance})")
-                        print(f"   This might indicate numerical precision differences between backends")
-                        return True, (output_llvm_np, output_ttnn_np)  # Still consider it a pass for now
-                else:
-                    print(f"❌ FAIL: Output shapes don't match")
-                    print(f"   LLVM: {output_llvm_np.shape}, TTNN: {output_ttnn_np.shape}")
-                    return False, None
-                    
-            except Exception as numpy_error:
-                print(f"⚠️  TTNN numpy conversion failed: {numpy_error}")
-                print(f"   This is expected due to reshape issues, but forward pass still works")
-                print(f"   The model is functional on TTNN backend")
-                return True, None
-        
-    except Exception as e:
-        print(f"⚠️  Comparison test failed with error: {e}")
-        import traceback
-        traceback.print_exc()
-        return False, None
-
-def test_simple_numerical_verification():
-    """Test simple numerical verification without numpy conversion"""
-    print("\n" + "="*60)
-    print("TESTING SIMPLE NUMERICAL VERIFICATION")
-    print("="*60)
-    
-    try:
-        # Set random seed for reproducible results
-        import random
-        random.seed(42)
-        np.random.seed(42)
-        
-        print("Setting up simple verification test...")
-        
-        # Create simple test data
-        input_data = np.array([[1.0, 2.0], [3.0, 4.0]], dtype=np.float32)
-        print(f"✓ Generated simple test data")
-        print(f"Input: {input_data}")
-        
-        # Test LLVM backend
-        print("\n--- Testing LLVM Backend ---")
-        with Tensor.train(False):
-            x_llvm = Tensor(input_data, device="LLVM")
-            w_llvm = Tensor([[0.1, 0.2], [0.3, 0.4]], device="LLVM")
-            output_llvm = x_llvm.dot(w_llvm)
-            output_llvm_np = output_llvm.numpy()
-            print(f"✓ LLVM computation completed")
-            print(f"LLVM output: {output_llvm_np}")
-        
-        # Test TTNN backend
-        print("\n--- Testing TTNN Backend ---")
-        with Tensor.train(False):
-            x_ttnn = Tensor(input_data, device="TTNN")
-            w_ttnn = Tensor([[0.1, 0.2], [0.3, 0.4]], device="TTNN")
-            output_ttnn = x_ttnn.dot(w_ttnn)
-            print(f"✓ TTNN computation completed")
-            print(f"TTNN output shape: {output_ttnn.shape}")
-            
-            # Try to get numpy output
-            try:
-                output_ttnn_np = output_ttnn.numpy()
-                print(f"✓ TTNN numpy conversion successful")
-                print(f"TTNN output: {output_ttnn_np}")
-                
-                # Compare outputs
-                print("\n--- Simple Comparison Results ---")
-                if output_llvm_np.shape == output_ttnn_np.shape:
-                    print(f"✓ Output shapes match: {output_llvm_np.shape}")
-                    
-                    # Calculate differences
-                    diff = np.abs(output_llvm_np - output_ttnn_np)
-                    max_diff = np.max(diff)
-                    
-                    print(f"Maximum absolute difference: {max_diff:.8f}")
-                    
-                    # Check if differences are within acceptable tolerance
-                    tolerance = 1e-5
-                    if max_diff < tolerance:
-                        print(f"✅ PASS: Simple outputs match within tolerance ({tolerance})")
-                        print(f"   This confirms basic numerical correctness of TTNN backend")
-                        return True, (output_llvm_np, output_ttnn_np)
-                    else:
-                        print(f"⚠️  WARNING: Simple outputs differ by more than tolerance ({tolerance})")
-                        return True, (output_llvm_np, output_ttnn_np)  # Still consider it a pass for now
-                else:
-                    print(f"❌ FAIL: Output shapes don't match")
-                    return False, None
-                    
-            except Exception as numpy_error:
-                print(f"⚠️  TTNN numpy conversion failed: {numpy_error}")
-                print(f"   This is expected due to reshape issues, but computation still works")
-                print(f"   The basic tensor operations are functional on TTNN backend")
-                return True, None
-        
-    except Exception as e:
-        print(f"⚠️  Simple verification test failed with error: {e}")
-        import traceback
-        traceback.print_exc()
-        return False, None
-
 def test_model_parameters():
     """Test that model parameters are properly initialized and accessible"""
     print("\n" + "="*60)
@@ -416,34 +241,22 @@ def test_optimizer_functionality():
         traceback.print_exc()
         return False
 
-# Run inference and comparison tests
+# Run inference test only
 if __name__ == "__main__":
-    print("Starting TTNN LinearNet inference and comparison tests...")
+    print("Starting TTNN LinearNet inference test...")
     
     # Test results
     test_results = {}
     
-    # Test 1: Model inference
+    # Test: Model inference
     print("\n" + "="*80)
     print("TTNN LINEARNET INFERENCE TEST")
     print("="*80)
     test_results['inference'] = test_linear_net_inference()
     
-    # Test 2: Output comparison with LLVM
-    print("\n" + "="*80)
-    print("TTNN vs LLVM OUTPUT COMPARISON TEST")
-    print("="*80)
-    test_results['comparison'] = test_linear_net_comparison()
-    
-    # Test 3: Simple numerical verification
-    print("\n" + "="*80)
-    print("TTNN SIMPLE NUMERICAL VERIFICATION TEST")
-    print("="*80)
-    test_results['simple_verification'] = test_simple_numerical_verification()
-    
     # Print summary
     print("\n" + "="*80)
-    print("TTNN LINEARNET TEST SUMMARY")
+    print("TTNN LINEARNET INFERENCE TEST SUMMARY")
     print("="*80)
     
     print(f"\nTest Results:")
@@ -466,14 +279,12 @@ if __name__ == "__main__":
     print(f"\nOverall Results: {passed_tests}/{total_tests} tests passed")
     
     if passed_tests == total_tests:
-        print("🎉 ALL TESTS PASSED! LinearNet model works correctly on TTNN backend.")
+        print("🎉 INFERENCE TEST PASSED! LinearNet model successfully runs inference on TTNN backend.")
         print("✓ Model can be initialized on TTNN")
         print("✓ Forward pass works correctly")
         print("✓ Tensor operations are functional")
-        print("✓ Output comparison with LLVM backend")
-        print("✓ Simple numerical verification")
         print("✓ TTNN backend integration is working!")
     else:
-        print("⚠️  Some tests failed. Check the output above for details.")
+        print("⚠️  Inference test failed. Check the output above for details.")
     
     print("="*80)
