@@ -332,10 +332,11 @@ class TTNNProgram:
           base_tensor = self._ensure_ttnn_tensor(bufs[buf_idx], (numel,), dtype)
           final_tensor = base_tensor
           
-                    # Apply VIEW transformations for GLOBAL buffers
+          # Apply VIEW transformations for GLOBAL buffers
           if shape_strides is not None:
             shp, std = shape_strides
             nz = [(d, s) for d, s in enumerate(std) if s != 0]
+            
             if len(nz) == 0:
               # all broadcast, just make a scalar then expand (will broadcast later in ops)
               final_tensor = ttnn.reshape(base_tensor, (1,)*len(shp))
@@ -350,10 +351,14 @@ class TTNNProgram:
               # order non-zero dims by stride (major -> minor)
               nz_sorted = sorted(nz, key=lambda x: x[1], reverse=True)
               base2d_shape = (int(shp[nz_sorted[0][0]]), int(shp[nz_sorted[1][0]]))
+              
               # reshape flat to base2d
               tmp = ttnn.reshape(base_tensor, base2d_shape)
+              
               # extend to N dims by appending ones
-              tmp = ttnn.reshape(tmp, base2d_shape + (1,)*(len(shp)-2))
+              extended_shape = base2d_shape + (1,)*(len(shp)-2)
+              tmp = ttnn.reshape(tmp, extended_shape)
+              
               # build perm to place axes at correct dims
               # mapping from view dim -> axis index in base2d
               axis_map = {nz_sorted[0][0]: 0, nz_sorted[1][0]: 1}
@@ -366,6 +371,37 @@ class TTNNProgram:
               perm[pos1] = 1
               # fill remaining with the singleton axes in order
               single_axes = [ax for ax in range(2, len(shp))]
+              for idx in range(len(shp)):
+                if perm[idx] is None:
+                  perm[idx] = single_axes.pop(0)
+              final_tensor = ttnn.permute(tmp, tuple(perm))
+            elif len(nz) == 3:
+              # 4D matmul lowering pattern: three data dims and one broadcast dim
+              # order non-zero dims by stride (major -> minor)
+              nz_sorted = sorted(nz, key=lambda x: x[1], reverse=True)
+              base3d_shape = (int(shp[nz_sorted[0][0]]), int(shp[nz_sorted[1][0]]), int(shp[nz_sorted[2][0]]))
+              
+              # reshape flat to base3d
+              tmp = ttnn.reshape(base_tensor, base3d_shape)
+              
+              # extend to N dims by appending ones
+              extended_shape = base3d_shape + (1,)*(len(shp)-3)
+              tmp = ttnn.reshape(tmp, extended_shape)
+              
+              # build perm to place axes at correct dims
+              # mapping from view dim -> axis index in base3d
+              axis_map = {nz_sorted[0][0]: 0, nz_sorted[1][0]: 1, nz_sorted[2][0]: 2}
+              # target positions for axis 0, 1, and 2
+              pos0 = next(idx for idx, d in enumerate(range(len(shp))) if axis_map.get(d, -1) == 0)
+              pos1 = next(idx for idx, d in enumerate(range(len(shp))) if axis_map.get(d, -1) == 1)
+              pos2 = next(idx for idx, d in enumerate(range(len(shp))) if axis_map.get(d, -1) == 2)
+              # current axes are [0,1,2,3,...] where 3.. are singleton dims
+              perm = [None]*len(shp)
+              perm[pos0] = 0
+              perm[pos1] = 1
+              perm[pos2] = 2
+              # fill remaining with the singleton axes in order
+              single_axes = [ax for ax in range(3, len(shp))]
               for idx in range(len(shp)):
                 if perm[idx] is None:
                   perm[idx] = single_axes.pop(0)
