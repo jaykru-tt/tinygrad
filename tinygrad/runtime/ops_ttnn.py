@@ -130,6 +130,8 @@ class TTNNProgram:
         unpack_fmt, torch_dt, ttnn_dt, bytes_per = 'e', torch.float16, ttnn.float16, 2
       elif dtype == dtypes.int32:
         unpack_fmt, torch_dt, ttnn_dt, bytes_per = 'i', torch.int32, ttnn.int32, 4
+      elif dtype == dtypes.uchar:
+        unpack_fmt, torch_dt, ttnn_dt, bytes_per = 'B', torch.uint8, ttnn.uint8, 1
       else:
         unpack_fmt, torch_dt, ttnn_dt, bytes_per = 'f', torch.float32, ttnn.float32, 4
 
